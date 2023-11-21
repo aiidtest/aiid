@@ -1,21 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@apollo/client';
-import { FIND_INCIDENT, UPDATE_INCIDENT } from '../../graphql/incidents';
-import useToastContext, { SEVERITY } from 'hooks/useToast';
-import { Button, Modal, Spinner } from 'react-bootstrap';
+import { FIND_FULL_INCIDENT, UPDATE_INCIDENT } from '../../graphql/incidents';
+import { FIND_ENTITIES, UPSERT_ENTITY } from '../../graphql/entities';
+import useToastContext, { SEVERITY } from '../../hooks/useToast';
+import { Spinner, Modal, Button } from 'flowbite-react';
 import IncidentForm, { schema } from './IncidentForm';
 import { Formik } from 'formik';
+import { LocalizedLink } from 'plugins/gatsby-theme-i18n';
+import { useTranslation, Trans } from 'react-i18next';
+import { processEntities } from '../../utils/entities';
+import { getUnixTime } from 'date-fns';
+import { useUserContext } from 'contexts/userContext';
+import { useLogIncidentHistory } from '../../hooks/useLogIncidentHistory';
 
 export default function IncidentEditModal({ show, onClose, incidentId }) {
-  const [incident, setIncident] = useState();
+  const { user } = useUserContext();
 
-  const { data: incidentData } = useQuery(FIND_INCIDENT, {
+  const { t, i18n } = useTranslation();
+
+  const [incident, setIncident] = useState(null);
+
+  const { data: incidentData } = useQuery(FIND_FULL_INCIDENT, {
     variables: { query: { incident_id: incidentId } },
   });
 
+  const { data: entitiesData } = useQuery(FIND_ENTITIES);
+
   const [updateIncident] = useMutation(UPDATE_INCIDENT);
 
+  const [createEntityMutation] = useMutation(UPSERT_ENTITY);
+
   const addToast = useToastContext();
+
+  const { logIncidentHistory } = useLogIncidentHistory();
 
   useEffect(() => {
     if (incidentData?.incident) {
@@ -25,9 +42,62 @@ export default function IncidentEditModal({ show, onClose, incidentId }) {
     }
   }, [incidentData]);
 
+  const updateSuccessToast = ({ incidentId }) => ({
+    message: (
+      <Trans i18n={i18n} incidentId={incidentId}>
+        Incident {{ incidentId }} updated successfully.{' '}
+        <LocalizedLink to={'/cite/' + incidentId}>View incident {{ incidentId }}</LocalizedLink>.
+      </Trans>
+    ),
+    severity: SEVERITY.success,
+  });
+
+  const updateErrorToast = ({ incidentId, error }) => ({
+    message: t('Error updating incident {{incident}}. \n {{message}}', {
+      incidentId,
+      message: error.message,
+    }),
+    severity: SEVERITY.danger,
+    error,
+  });
+
   const handleSubmit = async (values) => {
     try {
-      const updated = { ...values, reports: undefined, __typename: undefined };
+      const updated = {
+        ...values,
+        reports: undefined,
+        __typename: undefined,
+        embedding: undefined,
+        editors: { link: values.editors },
+        tsne: undefined,
+      };
+
+      const { entities } = entitiesData;
+
+      updated.AllegedDeveloperOfAISystem = await processEntities(
+        entities,
+        values.AllegedDeveloperOfAISystem,
+        createEntityMutation
+      );
+
+      updated.AllegedDeployerOfAISystem = await processEntities(
+        entities,
+        values.AllegedDeployerOfAISystem,
+        createEntityMutation
+      );
+
+      updated.AllegedHarmedOrNearlyHarmedParties = await processEntities(
+        entities,
+        values.AllegedHarmedOrNearlyHarmedParties,
+        createEntityMutation
+      );
+
+      updated.epoch_date_modified = getUnixTime(new Date());
+
+      // Add the current user to the list of editors
+      if (user && user.providerType != 'anon-user' && !updated.editors.link.includes(user.id)) {
+        updated.editors.link.push(user.id);
+      }
 
       await updateIncident({
         variables: {
@@ -40,48 +110,86 @@ export default function IncidentEditModal({ show, onClose, incidentId }) {
         },
       });
 
-      addToast({
-        message: `Incident ${incidentId} updated successfully.`,
-        severity: SEVERITY.success,
-      });
+      await logIncidentHistory(
+        {
+          ...incident,
+          ...updated,
+          reports: incident.reports,
+          embedding: incident.embedding,
+        },
+        user
+      );
+
+      addToast(updateSuccessToast({ incidentId }));
 
       onClose();
-    } catch (e) {
-      addToast({
-        message: `Error updating incident ${incident} \n ${e.message}`,
-        severity: SEVERITY.danger,
-      });
+    } catch (error) {
+      addToast(updateErrorToast({ incidentId, error }));
     }
   };
 
+  if (!show) {
+    return null;
+  }
+
   return (
-    <Modal show={show} onHide={onClose}>
-      <Modal.Header closeButton>
-        <Modal.Title>Edit Incident</Modal.Title>
-      </Modal.Header>
+    <Modal show={show} onClose={onClose} className="submission-modal" size="3xl">
+      <Modal.Header>Edit Incident {incident?.incident_id}</Modal.Header>
 
       {!incident && (
         <Modal.Body>
           {incident === undefined && (
-            <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+            <div className="flex justify-center">
+              <Spinner />
+            </div>
           )}
           {incident === null && <div>Report not found</div>}
         </Modal.Body>
       )}
 
-      {incident && (
-        <Formik validationSchema={schema} onSubmit={handleSubmit} initialValues={incident}>
+      {incident && entitiesData?.entities && (
+        <Formik
+          validationSchema={schema}
+          onSubmit={handleSubmit}
+          initialValues={{
+            ...incident,
+            AllegedDeveloperOfAISystem:
+              incident.AllegedDeveloperOfAISystem === null
+                ? []
+                : incident.AllegedDeveloperOfAISystem.map((item) => item.name),
+            AllegedDeployerOfAISystem:
+              incident.AllegedDeployerOfAISystem === null
+                ? []
+                : incident.AllegedDeployerOfAISystem.map((item) => item.name),
+            AllegedHarmedOrNearlyHarmedParties:
+              incident.AllegedHarmedOrNearlyHarmedParties === null
+                ? []
+                : incident.AllegedHarmedOrNearlyHarmedParties.map((item) => item.name),
+            editors: incident.editors.map((editor) => editor.userId),
+          }}
+        >
           {({ isValid, isSubmitting, submitForm }) => (
             <>
               <Modal.Body>
                 <IncidentForm />
               </Modal.Body>
               <Modal.Footer>
-                <Button variant="secondary" onClick={onClose}>
+                <Button color="gray" onClick={onClose}>
                   Close
                 </Button>
-                <Button variant="primary" onClick={submitForm} disabled={isSubmitting || !isValid}>
-                  Update
+                <Button
+                  onClick={submitForm}
+                  disabled={isSubmitting || !isValid}
+                  className="flex gap-2 disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Spinner size="sm" className="mr-2" />
+                      <Trans>Updating</Trans>
+                    </>
+                  ) : (
+                    <Trans>Update</Trans>
+                  )}
                 </Button>
               </Modal.Footer>
             </>

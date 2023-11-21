@@ -1,103 +1,75 @@
 import React, { useState, useEffect } from 'react';
-import REFINEMENT_LISTS from './REFINEMENT_LISTS';
-import styled from 'styled-components';
 import Stats from './Stats';
 import ClearFilters from './ClearFilters';
 import DisplayModeSwitch from './DisplayModeSwitch';
 import Filters from './Filters';
-import { Row, Col, Form } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCaretDown, faCaretRight } from '@fortawesome/free-solid-svg-icons';
 import { Trans } from 'react-i18next';
+import CsvExport from './CsvExport';
+import Sorting from './Sorting';
+import { useInstantSearch } from 'react-instantsearch';
 
-const ExpandFilters = styled.button`
-  user-select: none;
-  cursor: pointer;
-  color: inherit;
-  background: none;
-  border: none;
-`;
+const Controls = () => {
+  const { indexUiState } = useInstantSearch();
 
-const ExpandArrow = styled(FontAwesomeIcon)`
-  vertical-align: -0.2em !important;
-`;
-
-const ControlsRow = styled(Row)`
-  @media (max-width: 767.5px) {
-    display: none !important;
-  }
-`;
-
-const Hbox = styled(Col)`
-  display: flex;
-  gap: 0.25ch;
-  align-items: center;
-  padding-right: 0px !important;
-  > * {
-    line-height: 2em;
-    vertical-align: middle;
-    margin: 0px !important;
-  }
-  input {
-    vertical-align: middle;
-    margin: 0px;
-  }
-  label {
-    white-space: nowrap;
-  }
-`;
-
-const Switch = styled(Form.Check)`
-  cursor: pointer;
-  * {
-    cursor: pointer;
-  }
-`;
-
-const Controls = ({ query, setHideDuplicates, hideDuplicates }) => {
   const [expandFilters, setExpandFilters] = useState(false);
 
-  useEffect(() => setExpandFilters(REFINEMENT_LISTS.some((r) => query[r.attribute])), []);
+  useEffect(() => {
+    const defaultKeys = ['is_incident_report', 'page', 'display', 'sortBy'];
+
+    const expand = Object.keys(indexUiState.refinementList).some(
+      (key) => !defaultKeys.includes(key)
+    );
+
+    setExpandFilters(expand);
+  }, []);
 
   return (
     <>
-      <ControlsRow className="justify-content-start align-items-center mt-3 hiddenMobile">
-        <Col className="col-auto">
-          <Stats />
-        </Col>
-        <Col className="col-auto">
-          <DisplayModeSwitch />
-        </Col>
-        <Hbox>
-          <Switch
-            type="switch"
-            id="hide-duplicates"
-            checked={hideDuplicates}
-            onClick={(event) => {
-              setHideDuplicates(event.target.checked);
-            }}
-          />
-          <Form.Label for="hide-duplicates">
-            <Trans>1st report only</Trans>
-          </Form.Label>
-        </Hbox>
-        <Col className="col-auto">
-          <ClearFilters>
-            <Trans>Clear Filters</Trans>
-          </ClearFilters>
-        </Col>
-        <Col className="col-auto">
-          <ExpandFilters
-            id="expand-filters"
-            data-cy="expand-filters"
-            onClick={() => setExpandFilters(!expandFilters)}
-          >
-            <ExpandArrow icon={expandFilters ? faCaretDown : faCaretRight} fixedWidth />
-            <Trans>Filter Search</Trans>
-          </ExpandFilters>
-        </Col>
-      </ControlsRow>
-      <Row className="mb-3 hiddenMobile">{expandFilters && <Filters />}</Row>
+      <div className="justify-between gap-2 mt-4 flex flex-wrap items-center">
+        <div className="flex gap-4 items-center flex-wrap">
+          <div className="flex items-center">
+            <Stats />
+          </div>
+          <div className="place-self-center">
+            <DisplayModeSwitch />
+          </div>
+        </div>
+
+        <div className="flex flex-grow justify-end items-center flex-wrap">
+          <div className="place-self-center">
+            <CsvExport />
+          </div>
+
+          <Sorting />
+
+          <div className="justify-end">
+            <ClearFilters>
+              <Trans>Clear Filters</Trans>
+            </ClearFilters>
+          </div>
+
+          <div className="grid place-content-center">
+            <button
+              id="expand-filters"
+              data-cy="expand-filters"
+              onClick={() => setExpandFilters(!expandFilters)}
+              className="select-none cursor-pointer bg-none border-none"
+            >
+              <FontAwesomeIcon
+                className="-align-[0.2rem]"
+                icon={expandFilters ? faCaretDown : faCaretRight}
+                fixedWidth
+              />
+              <Trans>Filter Search</Trans>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className={'mb-3 invisible h-0' + (expandFilters ? ' md:visible h-auto' : '')}>
+        <Filters />
+      </div>
     </>
   );
 };

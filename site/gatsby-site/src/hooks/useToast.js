@@ -12,26 +12,26 @@ export const SEVERITY = {
   success: {
     key: 'success',
     icon: faCheckCircle,
-    faClass: 'far fa-check-circle fa-lg',
-    color: '#43a047',
+    faClass: 'far fa-check-circle fa-2xl',
+    className: 'bg-green-600',
   },
   danger: {
     key: 'danger',
     icon: faTimesCircle,
-    faClass: 'far fa-times-circle fa-lg',
-    color: '#d32f2f',
+    faClass: 'far fa-times-circle fa-2xl',
+    className: 'bg-red-700',
   },
   warning: {
     key: 'warning',
     icon: faExclamationTriangle,
-    faClass: 'far fa-exclamation-triangle fa-lg',
-    color: '#ffa000',
+    faClass: 'far fa-exclamation-triangle fa-2xl',
+    className: 'bg-amber-400',
   },
   info: {
     key: 'info',
     icon: faInfoCircle,
-    faClass: 'far fa-info-circle fa-lg',
-    color: '#2979ff',
+    faClass: 'far fa-info-circle fa-2xl',
+    className: 'bg-blue-600',
   },
 };
 

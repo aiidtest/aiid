@@ -1,100 +1,76 @@
-import React from 'react';
-import { connectHits, connectStateResults } from 'react-instantsearch-dom';
+import React, { useMemo } from 'react';
+import { useHits, useInstantSearch, useRefinementList } from 'react-instantsearch';
 import Hit from './Hit';
-import styled from 'styled-components';
-import { Spinner } from 'react-bootstrap';
 import { DisplayModeEnumParam } from './queryParams';
 import { useQueryParam } from 'use-query-params';
+import CardSkeleton from 'elements/Skeletons/Card';
+import ListSkeleton from 'elements/Skeletons/List';
+import { VIEW_TYPES } from 'utils/discover';
 
-const NoResults = styled.div`
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
+export default function Hits({ ...props }) {
+  const { status, results, indexUiState } = useInstantSearch();
 
-  grid-column-start: 2;
-  grid-column-end: 3;
-
-  p {
-    text-align: center;
-  }
-
-  @media (max-width: 1240px) {
-    grid-column-start: 1;
-  }
-`;
-
-const HitsContainer = styled.div`
-  &.compact,
-  &.details {
-    display: grid;
-    grid-gap: 6px;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-
-    @media (min-width: 576px) {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    @media (min-width: 768px) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    @media (min-width: 992px) {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-  }
-
-  &.list {
-    display: grid;
-    grid-gap: 6px;
-    grid-template-columns: 1fr;
-  }
-`;
-
-const Hits = ({
-  hits,
-  toggleFilterByIncidentId,
-  authorsModal,
-  submittersModal,
-  flagReportModal,
-  isSearchStalled,
-}) => {
-  if (isSearchStalled) {
-    return (
-      <NoResults>
-        <Spinner animation="border" role="status" variant="primary">
-          <span className="sr-only">Loading...</span>
-        </Spinner>
-      </NoResults>
-    );
-  }
-
-  if (hits.length === 0) {
-    return (
-      <NoResults>
-        <p>Your search returned no results.</p>
-        <p>Please clear your search in the search box above or the filters.</p>
-      </NoResults>
-    );
-  }
+  const { hits } = useHits(props);
 
   const [display] = useQueryParam('display', DisplayModeEnumParam);
 
-  return (
-    <HitsContainer className={`container-xl ${display}`}>
-      {hits.map((hit) => (
-        <Hit
-          key={hit.objectID}
-          item={hit}
-          authorsModal={authorsModal}
-          submittersModal={submittersModal}
-          flagReportModal={flagReportModal}
-          toggleFilterByIncidentId={toggleFilterByIncidentId}
-        />
-      ))}
-    </HitsContainer>
-  );
-};
+  const { refine } = useRefinementList({ attribute: 'incident_id' });
 
-export default connectHits(connectStateResults(Hits));
+  const isLoading = status === 'loading' || status === 'stalled';
+
+  const viewType = useMemo(() => {
+    return indexUiState.configure.distinct === true &&
+      indexUiState.refinementList.is_incident_report.length > 0 &&
+      indexUiState.refinementList.is_incident_report[0] === 'true'
+      ? VIEW_TYPES.INCIDENTS
+      : VIEW_TYPES.REPORTS;
+  }, [indexUiState]);
+
+  if (!results.__isArtificial && results.nbHits === 0) {
+    return (
+      <div className="tw-no-results">
+        <p>Your search returned no results.</p>
+        <p>Please clear your search in the search box above or the filters.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      data-cy="hits-container"
+      style={{
+        gridTemplateColumns: {
+          compact: 'repeat( auto-fit, minmax(18rem, 1fr) )',
+          details: 'repeat( auto-fit, minmax(18rem, 1fr) )',
+          list: '1fr',
+        }[display],
+      }}
+      className={`grid gap-2 mt-4 mx-auto px-3 w-full lg:max-w-6xl xl:max-w-7xl`}
+    >
+      {isLoading ? (
+        display === 'list' ? (
+          <ListSkeleton />
+        ) : (
+          Array(24)
+            .fill()
+            .map((_skeleton, i) => (
+              <CardSkeleton key={i} className="m:inline-block ml-3" text={display == 'details'} />
+            ))
+        )
+      ) : (
+        hits.map((hit) => (
+          <Hit
+            key={hit.objectID}
+            item={hit}
+            {...{
+              viewType,
+              toggleFilterByIncidentId: () => {
+                refine(hit.incident_id);
+              },
+            }}
+          />
+        ))
+      )}
+    </div>
+  );
+}

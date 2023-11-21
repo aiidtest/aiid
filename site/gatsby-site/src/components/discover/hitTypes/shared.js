@@ -1,53 +1,52 @@
 import { format, fromUnixTime } from 'date-fns';
-import { LocalizedLink } from 'gatsby-theme-i18n';
+import { LocalizedLink } from 'plugins/gatsby-theme-i18n';
 import React from 'react';
-import { Card } from 'react-bootstrap';
-import { Highlight } from 'react-instantsearch-dom';
-import styled from 'styled-components';
+import { Highlight } from 'react-instantsearch';
+import { VIEW_TYPES } from 'utils/discover';
 import WebArchiveLink from '../../../components/ui/WebArchiveLink';
 
-const linkHoverHighlight = `
-  a:not(:hover) {
-    color: inherit;
+export function citationReportUrl(item, viewType) {
+  let path = null;
+
+  if (viewType === VIEW_TYPES.INCIDENTS) {
+    path = '/cite/' + item.incident_id;
+  } else {
+    if (item.is_incident_report) {
+      path = '/cite/' + item.incident_id + '#r' + item.objectID;
+    } else {
+      path = `/reports/${item.report_number}`;
+    }
   }
-`;
 
-const HeaderCard = styled(Card.Title)`
-  a {
-    font-weight: bold;
-  }
-  ${linkHoverHighlight}
-`;
-
-const SubdomainCard = styled(Card.Subtitle)`
-  ${linkHoverHighlight}
-`;
-
-export function citationReportUrl(item) {
-  return '/cite/' + item.incident_id + '#r' + item.objectID;
+  return path;
 }
 
 export function HeaderTitle({ item, ...props }) {
   return (
-    <HeaderCard {...props}>
-      <LocalizedLink
-        to={citationReportUrl(item)}
-        className="text-decoration-none"
-        title={item.title}
-      >
-        <Highlight hit={item} attribute="title" />
-      </LocalizedLink>
-    </HeaderCard>
+    <div>
+      <h5 {...props}>
+        <LocalizedLink
+          to={citationReportUrl(item, props.viewType)}
+          className="no-underline font-bold text-inherit"
+          title={item.title}
+        >
+          <Highlight
+            hit={item}
+            attribute={props.viewType === VIEW_TYPES.INCIDENTS ? 'incident_title' : 'title'}
+          />
+        </LocalizedLink>
+      </h5>
+    </div>
   );
 }
 
-export function SourceDomainSubtitle({ item, ...props }) {
+export function SourceDomainSubtitle({ item, className }) {
   return (
-    <SubdomainCard {...props}>
+    <div className={`${className} text-inherit`}>
       <WebArchiveLink url={item.url} date={item.date_submitted}>
         {item.source_domain} &middot; {format(fromUnixTime(item.epoch_date_published), 'yyyy')}
       </WebArchiveLink>
-    </SubdomainCard>
+    </div>
   );
 }
 

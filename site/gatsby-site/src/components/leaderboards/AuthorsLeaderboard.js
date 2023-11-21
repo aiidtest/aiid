@@ -1,14 +1,17 @@
 import React from 'react';
 import { StaticQuery, graphql } from 'gatsby';
 import { Leaderboard } from './Leaderboard';
+import { useTranslation } from 'react-i18next';
 
-const AuthorsLeaderboard = ({ limit, className }) => {
+const AuthorsLeaderboard = ({ limit = 0, className = '' }) => {
+  const { t } = useTranslation();
+
   return (
     <StaticQuery
       query={graphql`
         query AuthorsLeaderboard {
           allMongodbAiidprodReports {
-            group(field: authors) {
+            group(field: { authors: SELECT }) {
               fieldValue
               totalCount
             }
@@ -20,7 +23,7 @@ const AuthorsLeaderboard = ({ limit, className }) => {
           dataHash={group}
           leaderboard={{
             attribute: 'authors',
-            title: 'Report Authorship',
+            title: t('Report Authorship'),
           }}
           limit={limit}
           className={className}

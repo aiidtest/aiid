@@ -1,81 +1,52 @@
 import React, { useState } from 'react';
-import { OverlayTrigger, Tooltip, Button, Card } from 'react-bootstrap';
-import styled from 'styled-components';
 import Markdown from 'react-markdown';
 import TaxonomyForm from './TaxonomyForm';
 import { Trans } from 'react-i18next';
+import Card from 'elements/Card';
+import { Button, Tooltip } from 'flowbite-react';
 
-const ClassificationContainer = styled.div`
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-start;
-  width: 100%;
-`;
-
-const TaxaCardHeader = styled.div`
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-start;
-  align-items: center;
-
-  p {
-    margin: 0;
-  }
-`;
-
-const Field = styled.div`
-  width: 20%;
-  border-right: 2.5px solid #d9deee;
-  margin-right: 1em;
-  padding-right: 0.5em;
-  color: grey;
-  font-weight: 700;
-
-  @media only screen and (max-width: 767px) {
-    width: 50%;
-    min-width: 40%;
-  }
-`;
-
-const Value = styled(Markdown)`
-  width: 80%;
-`;
-
-const TaxaHeader = styled.h4`
-  padding-right: 0.8em;
-`;
-
-const renderTooltip = (props, displayText) => (
-  <Tooltip id="button-tooltip" {...props}>
-    {displayText}
-  </Tooltip>
-);
-
-const Taxonomy = ({ taxonomy, incidentId, canEdit }) => {
+const Taxonomy = ({ taxonomy, incidentId, reportNumber, canEdit, initialEditing = false, id }) => {
   const [showAllClassifications, setShowAllClassifications] = useState(false);
-
-  const [isEditing, setIsEditing] = useState(false);
 
   const [showBanner, setShowBanner] = useState(false);
 
   const handleSubmit = () => {
-    setIsEditing(false);
     setShowBanner(true);
+    setEditing(false);
   };
 
+  const [editing, setEditing] = useState(initialEditing);
+
+  const heavyClassifications = taxonomy.classificationsArray.filter((field) => field.weight >= 50);
+
   return (
-    <Card key={taxonomy.namespace} className="mt-4" data-cy={taxonomy.namespace}>
-      <TaxaCardHeader className="card-header">
-        <TaxaHeader>
+    <Card
+      id={id}
+      key={taxonomy.namespace}
+      className="mt-6"
+      data-cy={`taxonomy-${taxonomy.namespace}`}
+    >
+      <div
+        className={
+          'tw-taxa-card-header tw-card-header bg-gray-50' + (editing && ' sticky top-0 z-50')
+        }
+      >
+        <h4 className="pr-0.8">
           <Trans namespace={taxonomy.namespace}>
             {{ namespace: taxonomy.namespace }} Taxonomy Classifications
           </Trans>
-        </TaxaHeader>
+        </h4>
         <>
-          {isEditing ? (
-            <Button onClick={() => setIsEditing(false)}>Cancel</Button>
+          {editing ? (
+            <Button size="xs" color={'gray'} onClick={() => setEditing(false)}>
+              <Trans>Cancel</Trans>
+            </Button>
           ) : (
-            canEdit && <Button onClick={() => setIsEditing(true)}>Edit</Button>
+            canEdit && (
+              <Button size="xs" color={'gray'} onClick={() => setEditing(true)}>
+                <Trans>Edit</Trans>
+              </Button>
+            )
           )}
         </>
         <a
@@ -84,9 +55,9 @@ const Taxonomy = ({ taxonomy, incidentId, canEdit }) => {
         >
           <Trans>Taxonomy Details</Trans>
         </a>
-      </TaxaCardHeader>
+      </div>
       <>
-        {!isEditing ? (
+        {!editing && (
           <>
             {showBanner && (
               <div style={{ padding: '0.5em' }}>
@@ -102,18 +73,14 @@ const Taxonomy = ({ taxonomy, incidentId, canEdit }) => {
             {taxonomy.classificationsArray.length > 0 ? (
               <>
                 {canEdit && (
-                  <ClassificationContainer key={'NOTES'} className="card-body">
-                    <Field>
-                      <OverlayTrigger
-                        placement="left"
-                        delay={{ show: 100, hide: 400 }}
-                        overlay={(e) => renderTooltip(e, 'Admin notes')}
-                      >
+                  <div key={'NOTES'} className="tw-classification-container tw-card-body">
+                    <div className="tw-field">
+                      <Tooltip content={'Admin notes'}>
                         <p>{'Notes'}</p>
-                      </OverlayTrigger>
-                    </Field>
-                    <Value>{taxonomy.notes}</Value>
-                  </ClassificationContainer>
+                      </Tooltip>
+                    </div>
+                    <Markdown className="w-4/5">{taxonomy.notes}</Markdown>
+                  </div>
                 )}
                 {taxonomy.classificationsArray
                   .filter((field) => {
@@ -134,20 +101,16 @@ const Taxonomy = ({ taxonomy, incidentId, canEdit }) => {
                     return field;
                   })
                   .map((field) => (
-                    <ClassificationContainer key={field.name} className="card-body">
-                      <Field>
-                        <OverlayTrigger
-                          placement="left"
-                          delay={{ show: 100, hide: 400 }}
-                          overlay={(e) => renderTooltip(e, field.shortDescription)}
-                        >
+                    <div key={field.name} className="tw-classification-container tw-card-body">
+                      <div className="tw-field">
+                        <Tooltip content={field.shortDescription}>
                           <p>{field.name}</p>
-                        </OverlayTrigger>
-                      </Field>
-                      <Value>{field.value}</Value>
-                    </ClassificationContainer>
+                        </Tooltip>
+                      </div>
+                      <Markdown className="w-4/5">{field.value}</Markdown>
+                    </div>
                   ))}
-                {taxonomy.classificationsArray.length > 2 && (
+                {taxonomy.classificationsArray.length > heavyClassifications.length && (
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm w-100"
@@ -161,7 +124,7 @@ const Taxonomy = ({ taxonomy, incidentId, canEdit }) => {
               <div style={{ padding: '0.5em' }}>
                 <Card bg="secondary" style={{ width: '100%' }} text="light" className="mb-2">
                   <Card.Body>
-                    <Card.Text>
+                    <Card.Text className="last:mb-0">
                       <Trans>No classifications for this taxonomy.</Trans>
                     </Card.Text>
                   </Card.Body>
@@ -169,15 +132,14 @@ const Taxonomy = ({ taxonomy, incidentId, canEdit }) => {
               </div>
             )}
           </>
-        ) : (
-          <>
-            <TaxonomyForm
-              namespace={taxonomy.namespace}
-              incidentId={incidentId}
-              onSubmit={handleSubmit}
-            />
-          </>
         )}
+        <TaxonomyForm
+          taxonomy={taxonomy}
+          incidentId={incidentId}
+          reportNumber={reportNumber}
+          onSubmit={handleSubmit}
+          active={editing}
+        />
       </>
     </Card>
   );

@@ -5,14 +5,40 @@ export const UserContext = createContext({
   user: undefined,
   isAdmin: undefined,
   isLoggedIn: undefined,
-  isRole() {
+  isRole(role) {
+    role;
     return false;
   },
   actions: {
-    login: () => {},
+    // Dummy functions, will be replaced by actual functions in UserContextProvider.js
+    loginWithEmail: ({ email, password, redirectTo }) => {
+      email;
+      password;
+      redirectTo;
+    },
+    loginWithFacebook: ({ loginRedirectUri, redirectTo }) => {
+      loginRedirectUri;
+      redirectTo;
+    },
     logout: () => {},
-    sendResetPasswordEmail: () => {},
-    resetPassword: () => {},
+    sendResetPasswordEmail: ({ email }) => {
+      email;
+    },
+    resetPassword: ({ password, token, tokenId }) => {
+      password;
+      token;
+      tokenId;
+    },
+    signUp: ({ email, password, redirectTo }) => {
+      email;
+      password;
+      redirectTo;
+    },
+    confirmEmail: ({ token, tokenId }) => {
+      token;
+      tokenId;
+      return new Promise(() => {});
+    },
   },
 });
 

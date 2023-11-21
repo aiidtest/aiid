@@ -1,19 +1,18 @@
 import React from 'react';
 import PostPreview from './PostPreview';
-import styled from 'styled-components';
+import PrismicPostPreview from './PrismicPostPreview';
 
-const StyledPostPreview = styled(PostPreview)`
-  & + & {
-    margin-top: 1rem;
-  }
-`;
-
-export default function PostsListing({ posts }) {
+export default function PostsListing({ posts, mdxBlogPosts }) {
   return (
     <>
-      {posts.map((p) => (
-        <StyledPostPreview key={p.fields.slug} post={p} />
-      ))}
+      <div className="tw-post-listing">
+        {posts.map((p) => (
+          <PrismicPostPreview key={p.node.id} post={p.node} />
+        ))}
+        {mdxBlogPosts.map((p) => (
+          <PostPreview key={p.fields.slug} post={p} />
+        ))}
+      </div>
     </>
   );
 }

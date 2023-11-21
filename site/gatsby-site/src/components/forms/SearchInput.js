@@ -1,30 +1,8 @@
 import { faSearch, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { TextInput } from 'flowbite-react';
 import React from 'react';
-import { FormControl, InputGroup } from 'react-bootstrap';
-import styled from 'styled-components';
 import { withTranslation } from 'react-i18next';
-
-const SearchStatus = styled.div`
-  position: absolute;
-  z-index: 4;
-  width: 20px;
-  height: 20px;
-  top: 50%;
-  right: 0.3rem;
-  transform: translateY(-50%);
-`;
-
-const SearchResetButton = styled.button`
-  background: none;
-  user-select: none;
-  border: none;
-`;
-
-const SearchFormControl = styled(FormControl)`
-  border-top-right-radius: 0.3rem !important;
-  border-bottom-right-radius: 0.3rem !important;
-`;
 
 export default withTranslation()(function SearchInput({
   value,
@@ -37,8 +15,9 @@ export default withTranslation()(function SearchInput({
   ...props
 }) {
   return (
-    <InputGroup className="position-relative">
-      <SearchFormControl
+    <div className="max-w-[640px] m-auto relative">
+      <TextInput
+        className="rounded-tr-[0.3rem] rounded-br-[0.3rem]"
         size={size}
         placeholder={placeHolder}
         maxLength={512}
@@ -47,15 +26,20 @@ export default withTranslation()(function SearchInput({
         onChange={(event) => onChange(event.currentTarget.value)}
         {...props}
       />
-      <SearchStatus>
+      <div className="absolute z-[4] w-5 top-1/2 right-[0.3rem] -translate-y-1/2 flex justify-center items-center">
         {value !== '' ? (
-          <SearchResetButton type="reset" title="Clear the search query." onClick={() => onClear()}>
+          <button
+            className="bg-none select-none border-none"
+            type="reset"
+            title="Clear the search query."
+            onClick={() => onClear()}
+          >
             <FontAwesomeIcon opacity={0.5} icon={faTimesCircle} className="pointer" title="clear" />
-          </SearchResetButton>
+          </button>
         ) : (
           <FontAwesomeIcon opacity={0.5} icon={faSearch} className="pointer" />
         )}
-      </SearchStatus>
-    </InputGroup>
+      </div>
+    </div>
   );
 });

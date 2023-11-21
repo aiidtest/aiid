@@ -1,13 +1,8 @@
-import 'bootstrap/dist/css/bootstrap.min.css';
+import './src/tailwind.css';
+import './src/global.css';
 import 'bootstrap-daterangepicker/daterangepicker.css';
 import '@fortawesome/fontawesome-svg-core/styles.css';
-import './src/global.css';
-
-import React from 'react';
-import { wrapRootElement } from './wrapRootElement';
-import { QueryParamProvider } from 'use-query-params';
-import { navigate } from 'gatsby';
-import { UserContextProvider } from 'contexts/userContext';
+import './src/custom.css';
 
 export const shouldUpdateScroll = ({ routerProps: { location } }) => {
   const { pathname } = location;
@@ -17,21 +12,6 @@ export const shouldUpdateScroll = ({ routerProps: { location } }) => {
   }
 };
 
-export const wrapPageElement = ({ element }) => {
-  const history = {
-    replace(location) {
-      navigate(location.search, { replace: true });
-    },
-    push(location) {
-      navigate(location.search, { replace: false });
-    },
-  };
+import { wrapRootElement, wrapPageElement } from './gatsby-shared';
 
-  return (
-    <QueryParamProvider history={history}>
-      <UserContextProvider>{element}</UserContextProvider>
-    </QueryParamProvider>
-  );
-};
-
-export { wrapRootElement };
+export { wrapPageElement, wrapRootElement };

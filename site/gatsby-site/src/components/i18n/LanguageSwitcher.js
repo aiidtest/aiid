@@ -1,8 +1,7 @@
-import React from 'react';
-import { Dropdown, DropdownButton } from 'react-bootstrap';
-import { useLocalization } from 'gatsby-theme-i18n';
-import { navigate } from 'gatsby';
+import React, { useEffect, useState } from 'react';
+import { useLocalization } from 'plugins/gatsby-theme-i18n';
 import useLocalizePath from './useLocalizePath';
+import { Badge, Dropdown } from 'flowbite-react';
 
 export default function LanguageSwitcher({ className = '' }) {
   const { locale: currentLang, config } = useLocalization();
@@ -16,21 +15,54 @@ export default function LanguageSwitcher({ className = '' }) {
 
     const newPath = localizedPath({ path, language });
 
-    navigate(newPath + search);
+    window.location.href = newPath + search;
   };
 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return false;
+  }
+
   return (
-    <DropdownButton
-      id="dropdown-basic-button"
-      title={currentLocale.localName}
+    <div
+      className="mr-3 md:mr-0 border border-gray-500 p-2 rounded-md hover:bg-white hover:text-gray-900"
       data-cy="language-switcher"
-      className={className}
     >
-      {config.map((locale) => (
-        <Dropdown.Item key={locale.code} onClick={() => setLanguage(locale.code)}>
-          {locale.name}
-        </Dropdown.Item>
-      ))}
-    </DropdownButton>
+      <Dropdown
+        id="dropdown-basic-button"
+        label={
+          <span className="flex">
+            {currentLocale.localName}
+            {currentLocale.code === 'fr' && (
+              <span className="mx-2 rounded hidden sm:flex">
+                <Badge>Beta</Badge>
+              </span>
+            )}
+          </span>
+        }
+        className={className + ' flex items-center'}
+        inline={true}
+      >
+        {config.map((locale) => (
+          <Dropdown.Item
+            key={locale.code}
+            onClick={() => setLanguage(locale.code)}
+            className="flex"
+          >
+            {locale.localName}
+            {locale.code === 'fr' && (
+              <span className="ml-2 rounded">
+                <Badge>Beta</Badge>
+              </span>
+            )}
+          </Dropdown.Item>
+        ))}
+      </Dropdown>
+    </div>
   );
 }

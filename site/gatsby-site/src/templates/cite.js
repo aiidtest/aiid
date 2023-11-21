@@ -1,112 +1,78 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { CloudinaryImage } from '@cloudinary/base';
+import { useLocalization } from 'plugins/gatsby-theme-i18n';
+import { graphql } from 'gatsby';
 import AiidHelmet from 'components/AiidHelmet';
-import { Button, Col, Container, Pagination, Row } from 'react-bootstrap';
-import Layout from 'components/Layout';
-import { StyledHeading } from 'components/styles/Docs';
-import Citation from 'components/cite/Citation';
-import ImageCarousel from 'components/cite/ImageCarousel';
-import BibTex from 'components/BibTex';
-import { getCanonicalUrl } from 'utils/getCanonicalUrl';
-import styled from 'styled-components';
-import { format, isAfter, isEqual } from 'date-fns';
-import { useModal, CustomModal } from '../hooks/useModal';
-import Timeline from 'components/visualizations/Timeline';
-import IncidentStatsCard from 'components/cite/IncidentStatsCard';
-import IncidentCard from 'components/cite/IncidentCard';
-import Taxonomy from 'components/taxa/Taxonomy';
-import { useUserContext } from 'contexts/userContext';
-import SimilarIncidents from 'components/cite/SimilarIncidents';
-import { Trans, useTranslation } from 'react-i18next';
-import { useLocalization } from 'gatsby-theme-i18n';
-import useLocalizePath from 'components/i18n/useLocalizePath';
-
-const CardContainer = styled.div`
-  border: 1.5px solid #d9deee;
-  border-radius: 5px;
-  box-shadow: 0 2px 5px 0px #e3e5ec;
-  h4 {
-    margin: 0 !important;
-  }
-`;
-
-const StatsContainer = styled.div`
-  h4 {
-    margin: 0 !important;
-  }
-`;
-
-const IncidnetsReportsTitle = styled.div`
-  padding-bottom: 20px;
-`;
-
-const sortIncidentsByDatePublished = (incidentReports) => {
-  return incidentReports.sort((a, b) => {
-    const dateA = new Date(a.date_published);
-
-    const dateB = new Date(b.date_published);
-
-    if (isEqual(dateA, dateB)) {
-      return 0;
-    }
-    if (isAfter(dateA, dateB)) {
-      return 1;
-    }
-    if (isAfter(dateB, dateA)) {
-      return -1;
-    }
-  });
-};
+import { getTranslatedReports, sortIncidentsByDatePublished } from 'utils/cite';
+import { computeEntities, RESPONSE_TAG } from 'utils/entities';
+import config from '../../config';
+import { isCompleteReport } from 'utils/variants';
+import CiteTemplate from './citeTemplate';
+import CiteDynamicTemplate from './citeDynamicTemplate';
 
 function CitePage(props) {
   const {
     pageContext: {
-      incident,
-      incidentReports,
+      nextIncident,
+      prevIncident,
       nlp_similar_incidents,
       editor_similar_incidents,
       editor_dissimilar_incidents,
-      taxonomies,
-      nextIncident,
-      prevIncident,
+    },
+    data: {
+      allMongodbAiidprodTaxa,
+      allMongodbAiidprodClassifications,
+      allMongodbAiidprodReports,
+      allMongodbTranslationsReportsEs,
+      allMongodbTranslationsReportsEn,
+      allMongodbTranslationsReportsFr,
+      incident,
+      entities: entitiesData,
+      responses,
     },
   } = props;
 
-  const { isRole, user } = useUserContext();
-
-  const { t } = useTranslation();
+  const [isLiveData, setIsLiveData] = useState(false);
 
   const { locale } = useLocalization();
 
-  const localizePath = useLocalizePath();
-
   // meta tags
-
-  const defaultIncidentTitle = t('Citation record for Incident {{id}}', {
-    id: incident.incident_id,
-  });
 
   const metaTitle = `Incident ${incident.incident_id}: ${incident.title}`;
 
   const metaDescription = incident.description;
 
-  const canonicalUrl = getCanonicalUrl(incident.incident_id);
+  const incidentReports = getTranslatedReports({
+    allMongodbAiidprodReports,
+    translations: {
+      en: allMongodbTranslationsReportsEn,
+      es: allMongodbTranslationsReportsEs,
+      fr: allMongodbTranslationsReportsFr,
+    },
+    locale,
+  });
 
-  const sortedReports = sortIncidentsByDatePublished(incidentReports);
+  const sortedIncidentReports = sortIncidentsByDatePublished(incidentReports);
 
-  const metaImage = sortedReports[0].image_url;
+  const sortedReports = sortedIncidentReports.filter((report) => isCompleteReport(report));
 
-  const authorsModal = useModal();
+  const publicID = sortedReports.find((report) => report.cloudinary_id)?.cloudinary_id;
 
-  const submittersModal = useModal();
+  const image = new CloudinaryImage(publicID, {
+    cloudName: config.cloudinary.cloudName,
+  });
 
-  const flagReportModal = useModal();
+  const metaImage = image.createCloudinaryURL();
 
-  const timeline = sortedReports.map(({ date_published, title, mongodb_id, report_number }) => ({
-    date_published,
-    title,
-    mongodb_id,
-    report_number,
-  }));
+  const timeline = sortedReports.map(
+    ({ date_published, title, mongodb_id, report_number, tags }) => ({
+      date_published,
+      title,
+      mongodb_id,
+      report_number,
+      isResponse: tags && tags.includes(RESPONSE_TAG),
+    })
+  );
 
   timeline.push({
     date_published: incident.date,
@@ -115,209 +81,212 @@ function CitePage(props) {
     isOccurrence: true,
   });
 
-  const [taxonomiesList, setTaxonomiesList] = useState(
-    taxonomies.map((t) => ({ ...t, canEdit: false }))
-  );
+  const variants = sortedIncidentReports.filter((report) => !isCompleteReport(report));
 
-  useEffect(() => {
-    setTaxonomiesList((list) =>
-      list.map((t) => ({
-        ...t,
-        canEdit:
-          isRole('taxonomy_editor') || isRole('taxonomy_editor_' + t.namespace.toLowerCase()),
-      }))
-    );
-  }, [user]);
+  const entities = computeEntities({
+    incidents: [incident],
+    entities: entitiesData.nodes,
+    responses: responses.nodes,
+  });
 
   return (
-    <Layout {...props}>
-      <AiidHelmet {...{ metaTitle, metaDescription, canonicalUrl, metaImage }}>
+    <div {...props}>
+      <AiidHelmet {...{ metaTitle, metaDescription, path: props.location.pathname, metaImage }}>
         <meta property="og:type" content="website" />
       </AiidHelmet>
 
-      <div className={'titleWrapper'}>
-        <StyledHeading>{locale == 'en' ? metaTitle : defaultIncidentTitle}</StyledHeading>
-      </div>
-
-      <Container>
-        <Row>
-          <Col>
-            <CardContainer className="card" data-cy="citation">
-              <div className="card-header">
-                <h4>
-                  <Trans>Suggested citation format</Trans>
-                </h4>
-              </div>
-              <div className="card-body">
-                <Citation
-                  nodes={incidentReports}
-                  incidentDate={incident.date}
-                  incident_id={incident.incident_id}
-                  editors={incident.editors}
-                />
-              </div>
-            </CardContainer>
-          </Col>
-        </Row>
-
-        <Row className="mt-4">
-          <Col>
-            <StatsContainer data-cy={'incident-stats'}>
-              <IncidentStatsCard
-                {...{
-                  incidentId: incident.incident_id,
-                  reportCount: incidentReports.length,
-                  incidentDate: incident.date,
-                  editors: incident.editors.join(', '),
-                }}
-              />
-            </StatsContainer>
-          </Col>
-        </Row>
-
-        <Row className="mt-4">
-          <Col>
-            <CardContainer className="card">
-              <div className="card-header">
-                <h4>
-                  <Trans>Reports Timeline</Trans>
-                </h4>
-              </div>
-              <div className="card-body">
-                <Timeline data={timeline} />
-              </div>
-            </CardContainer>
-          </Col>
-        </Row>
-
-        <Row className="mt-4">
-          <Col>
-            <CardContainer className="card">
-              <div className="card-header">
-                <h4>
-                  <Trans>Tools</Trans>
-                </h4>
-              </div>
-              <div className="card-body">
-                <Button
-                  variant="outline-primary"
-                  className="me-2"
-                  href={`/apps/submit?incident_id=${incident.incident_id}&date_downloaded=${format(
-                    new Date(),
-                    'yyyy-MM-dd'
-                  )}`}
-                >
-                  <Trans>New Report</Trans>
-                </Button>
-                <Button variant="outline-primary" className="me-2" href={'/summaries/incidents'}>
-                  <Trans>All Incidents</Trans>
-                </Button>
-                <Button
-                  variant="outline-primary"
-                  className="me-2"
-                  href={'/apps/discover?incident_id=' + incident.incident_id}
-                >
-                  <Trans>Discover</Trans>
-                </Button>
-                {isRole('incident_editor') && (
-                  <Button
-                    variant="outline-primary"
-                    className="me-2"
-                    href={'/incidents/edit?incident_id=' + incident.incident_id}
-                  >
-                    Edit Incident
-                  </Button>
-                )}
-                <BibTex
-                  nodes={incidentReports}
-                  incidentDate={incident.date}
-                  incident_id={incident.incident_id}
-                  editors={incident.editors}
-                />
-              </div>
-            </CardContainer>
-          </Col>
-        </Row>
-
-        {taxonomies.length > 0 && (
-          <Row id="taxa-area">
-            <Col>
-              {taxonomiesList
-                .filter((t) => t.canEdit || t.classificationsArray.length > 0)
-                .map((t) => (
-                  <Taxonomy
-                    key={t.namespace}
-                    taxonomy={t}
-                    incidentId={incident.incident_id}
-                    canEdit={t.canEdit}
-                  />
-                ))}
-            </Col>
-          </Row>
-        )}
-
-        <Row className="mt-4">
-          <Col>
-            <CardContainer className="card">
-              <ImageCarousel nodes={incidentReports} />
-            </CardContainer>
-          </Col>
-        </Row>
-
-        <Row className="mt-4">
-          <Col>
-            <IncidnetsReportsTitle>
-              <div className={'titleWrapper'}>
-                <StyledHeading>
-                  <Trans>Incidents Reports</Trans>
-                </StyledHeading>
-              </div>
-            </IncidnetsReportsTitle>
-          </Col>
-        </Row>
-
-        {sortedReports.map((report) => (
-          <Row className="mb-4" key={report.report_number}>
-            <Col>
-              <IncidentCard
-                item={report}
-                authorsModal={authorsModal}
-                submittersModal={submittersModal}
-                flagReportModal={flagReportModal}
-              />
-            </Col>
-          </Row>
-        ))}
-
-        <SimilarIncidents
+      {isLiveData ? (
+        <CiteDynamicTemplate
+          allMongodbAiidprodTaxa={allMongodbAiidprodTaxa}
+          entitiesData={entitiesData}
+          incident_id={incident.incident_id}
+          responses={responses}
           nlp_similar_incidents={nlp_similar_incidents}
           editor_similar_incidents={editor_similar_incidents}
           editor_dissimilar_incidents={editor_dissimilar_incidents}
-          flagged_dissimilar_incidents={incident.flagged_dissimilar_incidents}
-          parentIncident={incident}
+          locationPathName={props.location.pathname}
+          setIsLiveData={setIsLiveData}
         />
-
-        <Pagination className="justify-content-between">
-          <Pagination.Item
-            href={localizePath({ path: `/cite/${prevIncident}` })}
-            disabled={!prevIncident}
-          >
-            ‹ <Trans>Previous Incident</Trans>
-          </Pagination.Item>
-          <Pagination.Item
-            href={localizePath({ path: `/cite/${nextIncident}` })}
-            disabled={!nextIncident}
-          >
-            <Trans>Next Incident</Trans> ›
-          </Pagination.Item>
-        </Pagination>
-
-        <CustomModal {...authorsModal} />
-        <CustomModal {...submittersModal} />
-        <CustomModal {...flagReportModal} />
-      </Container>
-    </Layout>
+      ) : (
+        <CiteTemplate
+          incident={incident}
+          sortedReports={sortedReports}
+          variants={variants}
+          metaTitle={metaTitle}
+          entities={entities}
+          timeline={timeline}
+          locationPathName={props.location.pathname}
+          allMongodbAiidprodTaxa={allMongodbAiidprodTaxa}
+          allMongodbAiidprodClassifications={allMongodbAiidprodClassifications}
+          nextIncident={nextIncident}
+          prevIncident={prevIncident}
+          nlp_similar_incidents={nlp_similar_incidents}
+          editor_similar_incidents={editor_similar_incidents}
+          editor_dissimilar_incidents={editor_dissimilar_incidents}
+          setIsLiveData={setIsLiveData}
+        />
+      )}
+    </div>
   );
 }
+
+export const query = graphql`
+  query CitationPageQuery(
+    $incident_id: Int
+    $report_numbers: [Int]
+    $translate_es: Boolean!
+    $translate_fr: Boolean!
+    $translate_en: Boolean!
+  ) {
+    allMongodbAiidprodClassifications(
+      filter: { incidents: { elemMatch: { incident_id: { eq: $incident_id } } } }
+    ) {
+      nodes {
+        incidents {
+          incident_id
+        }
+        id
+        namespace
+        notes
+        attributes {
+          short_name
+          value_json
+        }
+        publish
+      }
+    }
+    allMongodbAiidprodTaxa {
+      nodes {
+        id
+        namespace
+        weight
+        description
+        complete_entities
+        dummy_fields {
+          field_number
+          short_name
+        }
+        field_list {
+          field_number
+          short_name
+          long_name
+          short_description
+          long_description
+          display_type
+          mongo_type
+          default
+          placeholder
+          permitted_values
+          weight
+          instant_facet
+          required
+          public
+          complete_from {
+            all
+            current
+            entities
+          }
+          subfields {
+            field_number
+            short_name
+            long_name
+            short_description
+            long_description
+            display_type
+            mongo_type
+            default
+            placeholder
+            permitted_values
+            weight
+            instant_facet
+            required
+            public
+            complete_from {
+              all
+              current
+              entities
+            }
+          }
+        }
+      }
+    }
+    allMongodbAiidprodReports(filter: { report_number: { in: $report_numbers } }) {
+      nodes {
+        submitters
+        date_published
+        report_number
+        title
+        description
+        url
+        image_url
+        cloudinary_id
+        source_domain
+        mongodb_id
+        text
+        authors
+        epoch_date_submitted
+        language
+        tags
+        inputs_outputs
+      }
+    }
+    allMongodbTranslationsReportsEs(filter: { report_number: { in: $report_numbers } })
+      @include(if: $translate_es) {
+      nodes {
+        title
+        text
+        report_number
+      }
+    }
+    allMongodbTranslationsReportsFr(filter: { report_number: { in: $report_numbers } })
+      @include(if: $translate_fr) {
+      nodes {
+        title
+        text
+        report_number
+      }
+    }
+    allMongodbTranslationsReportsEn(filter: { report_number: { in: $report_numbers } })
+      @include(if: $translate_en) {
+      nodes {
+        title
+        text
+        report_number
+      }
+    }
+    incident: mongodbAiidprodIncidents(incident_id: { eq: $incident_id }) {
+      incident_id
+      reports {
+        report_number
+      }
+      title
+      description
+      date
+      editors {
+        userId
+        first_name
+        last_name
+      }
+      flagged_dissimilar_incidents
+      Alleged_developer_of_AI_system
+      Alleged_deployer_of_AI_system
+      Alleged_harmed_or_nearly_harmed_parties
+      editor_notes
+    }
+
+    entities: allMongodbAiidprodEntities {
+      nodes {
+        entity_id
+        name
+      }
+    }
+
+    responses: allMongodbAiidprodReports(filter: { tags: { in: ["response"] } }) {
+      nodes {
+        report_number
+      }
+    }
+  }
+`;
 
 export default CitePage;

@@ -1,16 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { connectSearchBox } from 'react-instantsearch-dom';
-import styled from 'styled-components';
+import { useSearchBox } from 'react-instantsearch';
 import { debounce } from 'debounce';
-import { Row, Col } from 'react-bootstrap';
 import SearchInput from 'components/forms/SearchInput';
+import Row from 'elements/Row';
+import Col from 'elements/Col';
 
-const SearchForm = styled.form`
-  display: block;
-  position: relative;
-`;
+export default function SearchBox({ ...props }) {
+  const { query: currentRefinement, refine } = useSearchBox(props);
 
-function SearchBox({ currentRefinement, refine }) {
   const [query, setQuery] = useState(currentRefinement);
 
   const debouncedRefine = useRef(debounce((value) => refine(value), 500)).current;
@@ -25,27 +22,33 @@ function SearchBox({ currentRefinement, refine }) {
     setQuery(currentRefinement);
   }, [currentRefinement]);
 
+  // SearchInput component was causing rehydration errors
+
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
   const clear = () => {
     setQuery('');
     refine('');
   };
 
   return (
-    <Row>
+    <Row data-cy="search-box">
       <Col>
-        <SearchForm id="searchForm">
-          <SearchInput
-            value={query}
-            onChange={setQuery}
-            onClear={clear}
-            onKeyPress={(e) => {
-              e.key === 'Enter' && e.preventDefault();
-            }}
-          />
-        </SearchForm>
+        <form className="block relative" id="searchForm">
+          {mounted && (
+            <SearchInput
+              value={query}
+              onChange={setQuery}
+              onClear={clear}
+              onKeyPress={(e) => {
+                e.key === 'Enter' && e.preventDefault();
+              }}
+            />
+          )}
+        </form>
       </Col>
     </Row>
   );
 }
-
-export default connectSearchBox(SearchBox);

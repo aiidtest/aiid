@@ -1,0 +1,777 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+
+    .h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6 {
+        @apply font-medium mb-2 mt-0 leading-tight;
+    }
+
+    .h1, h1 {
+      @apply text-3xl
+    }
+
+    .h2, h2 {
+      @apply text-2xl 
+    }
+
+    .h3, h3 {
+      @apply text-xl
+    }
+
+    .h4, h4 {
+      @apply text-lg
+    }
+
+    .h5, h5 {
+      @apply text-base
+    }
+
+    input {
+        @apply flex-auto;
+    }
+
+    input:not(.error) {
+        @apply text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500;
+    }
+    
+    input.error {
+        @apply bg-red-50 border border-red-500 text-red-900 placeholder-red-700 text-sm rounded-lg focus:ring-red-500 focus:border-red-500 block w-full p-2.5;
+    }
+
+    p {
+        @apply mb-4 mt-4;
+    }
+
+    .input-group>.form-control, .input-group>.form-floating, .input-group>.form-select {
+        @apply min-w-0 relative flex-auto;
+    }
+
+    .form-control-lg {
+        @apply rounded-lg text-xl py-2 px-4 min-h-[2.5rem];
+    }
+
+    .form-control {
+        @apply appearance-none bg-white rounded-md text-gray-900 block text-base font-normal leading-normal w-full py-1 px-3 transition-form-control bg-clip-padding border-1 border-solid border-form-control;
+    }
+
+    .tw-layout {
+        @apply flex md:flex content-between bg-white md:block border-none;
+    }
+
+    .tw-layout .item > a:hover {
+        @apply bg-primary-blue text-white;
+    }
+
+    .tw-container {
+        @apply xl:max-w-[1140px] md:max-w-[520px] lg:max-w-[960px] sm:max-w-[540px];
+    }
+
+    .tw-bg-secondary {
+        @apply bg-secondary-gray opacity-100 text-text-light-gray;
+    }
+
+    .tw-hidden-mobile {
+        @apply 767px:hidden ;
+    }
+
+    .tw-col-auto {
+        @apply flex-0-0-auto w-auto max-w-none;
+    }
+
+    .tw-modal-body li {
+        @apply pl-6;
+    }
+}
+
+@layer components {
+    /** Styled Heading **/
+    .tw-styled-heading {
+        @apply font-karla text-32px leading-normal font-bold flex-[1] mt-0 pt-0;
+    }
+    
+    .tw-card {
+        @apply flex flex-col border-1 rounded-lg;
+    }
+
+    .tw-card-header {
+        @apply flex justify-between border-t-0 border-r-0 border-l-0 border-b border-b-border-gray px-4 py-2 bg-light-gray border-1 mb-0;
+    }
+
+    .tw-card-title {
+        @apply flex-1;
+    }
+
+    .tw-card-title h2 {
+        @apply text-2rem;
+    }
+
+    .tw-card-title a {
+        @apply text-primary-blue;
+    }
+    
+    .tw-card-title h3 {
+        @apply text-2xl mb-2;
+    }
+
+    .tw-card-body {
+        @apply flex p-4 flex-col;
+    }
+
+    .tw-card-footer {
+        @apply bg-light-gray border-border-gray py-2 px-4;
+    }
+
+    .tw-post-listing {
+        @apply flex flex-wrap lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-4;
+    }
+
+    /* TAILWIND Buttons begins */
+    .tw-btn, .btn {
+        @apply bg-transparent border-1 border-transparent rounded cursor-pointer inline-block text-base font-normal py-1.5 px-2 text-center no-underline select-none align-middle transition-btn;
+        border-radius: 0.25rem !important;
+    }
+
+    .btn-check:active+.btn, .btn-check:checked+.btn, .btn.active, .btn.show, .btn:active {
+        @apply bg-btn-check-active border-btn-check-border text-white;
+    }
+
+    .tw-btn-primary, .btn-primary {
+        @apply bg-blue-600 border-blue-600 text-white hover:bg-hover-blue hover:border-deep-blue hover:text-white;
+    }
+
+    .tw-btn-secondary, .btn-secondary {
+        @apply bg-dark-gray border-dark-gray text-white  hover:bg-gray-600 hover:border-gray-600 hover:text-white;
+    }
+
+    .tw-btn-lg {
+        @apply rounded text-xl py-[0.5rem] px-[1rem];
+    }
+
+    .tw-btn-outline-primary {
+        @apply border-primary-blue text-primary-blue;
+    }
+
+    .tw-btn-outline-primary:hover {
+        @apply bg-primary-blue text-white border-primary-blue;
+    }
+
+    .tw-btn-menu {
+        @apply md:hidden w-[100px] h-10 fixed left-56 top-1/2 rotate-90 z-10;
+    }
+
+    .tw-btn-menu.collapsed {
+        @apply -left-8;
+    }
+
+    /* TAILWIND Buttons ends */
+
+    /* TAILWIND Grid begins */
+    .tw-row {
+        @apply flex flex-wrap -ml-3 mr-0 mt-0;
+    }
+
+    .tw-row > * {
+        @apply mt-0 max-w-full pl-3 pr-3 w-full;
+    }
+
+    .tw-col {
+        @apply w-full lg:flex-1;
+    }
+
+    .tw-pagination {
+        @apply flex pl-0 list-none;
+    }
+
+    /* TAILWIND Grid ends */
+
+    .tw-page-item:last-child .tw-page-link {
+        @apply rounded-br rounded-tr;
+    }
+
+    .tw-page-item:not(:first-child) .tw-page-link {
+        @apply ml-[-1px];
+    }
+
+    .tw-page-item.disabled .tw-page-link {
+        @apply bg-white border-disable-gray text-dark-gray pointer-events-none;
+    }
+
+    .tw-page-link {
+        @apply py-[0.375rem] px-[0.75rem] bg-white border-1 border-disable-gray text-primary-blue block relative no-underline transition-btn;
+    }
+
+    .tw-page-link:hover {
+        @apply bg-light-gray text-deep-blue border-disable-gray z-2;
+    }
+
+    .tw-classification-container {
+        @apply flex flex-row justify-start w-full flex-auto p-4;
+    }
+
+    .tw-field {
+        @apply w-[20%] border-r-2.5 mr-4 border-border-light-gray text-default-gray font-bold;
+    }
+
+    .tw-taxa-card-header {
+        @apply flex flex-row justify-start items-center     
+    }
+
+    .tw-taxa-card-header p {
+        @apply m-0;
+    }
+
+    /* TAILWIND Tooltip begins */
+    .tw-tooltip-wrapper {
+        @apply relative inline-block;
+    }
+
+    .tw-tooltip-left .tw-tooltip {
+        @apply absolute right-full top-[-3px] mr-[10px] z-20 mb-3 whitespace-nowrap rounded bg-black py-[6px] px-4 text-sm font-semibold text-white opacity-0;
+    }
+
+    .tw-tooltip-left .tw-tooltip .tw-tooltip-arrow {
+        @apply absolute right-[-3px] top-1/2 -z-10 h-2 w-2 -translate-y-1 rotate-45 rounded-sm bg-black;
+    }
+
+    /* TAILWIND Tooltip ends */
+
+    .tw-similar-incidents .card {
+        @apply overflow-hidden shadow-card;
+    }
+
+    .tw-similar-incidents .card a:not(hover){
+        @apply text-inherit;
+    }
+
+    .tw-similar-incidents .card h3{
+        @apply mt-4 my-4 mb-2 text-[16pt];
+        hyphens: auto;  
+    }
+
+    .tw-similar-incidents p + .card {
+        @apply mt-0;
+    }
+
+    .tw-similar-incidents h2 {
+        @apply text-[200%];
+    }
+    
+    .tw-subtitle {
+        @apply text-[120%] font-bold;
+    }
+
+    .tw-subtitle svg {
+        @apply ml-[0.5ch];
+    }
+
+    .tw-actions-icons {
+        @apply inline-flex items-center;
+    }
+
+    .tw-actions-icons > * {
+        @apply ml-[0.25ch] mr-[0.25ch];
+    }
+
+    .tw-edit-icon {
+        @apply align-middle -mt-0.5;
+    }
+
+    .tw-flag-prompt {
+        @apply mt-4 mb-4;
+    }
+
+    .tw-flag-prompt svg {
+        @apply ml-[0.5ch] mr-[0.5ch] text-dark-gray;
+    }
+
+    .tw-card-set {
+        @apply gap-4 mb-8 grid grid-cols-1 lg:grid-cols-2 1300px:grid-cols-3;
+    }
+
+    .tw-card-set > * {
+        @apply 1300px:basis-0 1300px:grow max-w-[700px];
+    }
+
+    .tw-header-icons-container { 
+        @apply flex flex-row justify-between items-center order-2;
+    }
+
+    .tw-header-icons-container > *, .tw-social-media-icons {
+        @apply mx-2 inline-block;
+    }
+
+    .tw-footer-link {
+        @apply text-gray-700 hover:text-primary-blue;
+    }
+
+    /* This needs to be set for the submission modal because Flowbite has a defect with long-content modals 
+    where the modal is not scrollable and the top content is not accesible. */
+    .submission-modal > div:first-child {
+        @apply md:m-auto;
+    }
+
+    .pagination nav ul {
+        margin-top: 0 !important;
+    }
+}
+
+@layer utilities {
+    
+    /* TAILWIND Sidebar starts */
+
+    .tw-side-bar {
+        @apply font-bold  min-w-[250px] font-karla w-full md:w-64 overflow-auto sticky pl-0 top-0 pr-0 h-auto  md:h-screen shadow-left-side-bar;
+    }
+
+    .tw-side-bar.collapse {
+        @apply hidden;
+    } 
+
+    .tw-li-divider {
+        @apply list-none py-4 px-0;
+    }
+
+    .tw-li-divider hr {
+        @apply m-0 p-0 border-b border-solid border-b-side-bar
+    }
+    
+    .tw-side-bar-ul {
+        @apply mt-4 pl-0;
+    }
+
+    .tw-side-bar-ul .hide-front-line .collapser {
+        @apply bg-transparent absolute cursor-pointer right-5 z-[1];
+    }
+    
+    .tw-side-bar-ul .hide-front-line .active > a {
+        @apply bg-light-orange text-white;
+    }
+
+    .tw-side-bar-ul .side-bar-links {
+        @apply list-none;
+    }
+
+    .tw-side-bar-ul .side-bar-links a {
+        @apply text-list-gray no-underline py-2 pr-0 flex items-center relative font-normal;
+    }
+
+    .tw-side-bar-ul .side-bar-links a.level-0 {
+        @apply font-bold;
+    }
+
+    .tw-side-bar-ul .side-bar-links a:hover {
+        @apply text-light-orange;
+    }
+
+    .tw-side-bar-ul .side-bar-links a.active {
+        @apply border-light-blue border-y border-r-0 border-l bg-white;
+    }
+
+    .tw-side-bar-ul .side-bar-links a svg {
+        @apply ml-[1ch] align-top inline;
+    }
+
+    .tw-side-bar-ul ul {
+        @apply pl-0;
+    }
+
+    .tw-side-bar-ul li {
+        @apply list-none w-auto;
+    }
+
+    .tw-side-bar-ul li a {
+        @apply border-1 border-transparent border-r-0 text-sm leading-normal py-[7px] pr-[25px] pl-[10px];
+    }
+
+    .tw-side-bar-ul .item {
+        @apply list-none p-0;
+    }
+
+    .tw-side-bar-ul .item > a {
+        @apply text-light-orange md:text-[rgb(59,69,78)] items-center flex pl-4 pr-8 relative no-underline w-full;
+    }
+
+    .tw-side-bar-ul .item > a:hover {
+        @apply bg-light-orange text-white;
+    }
+
+    .tw-side-bar-ul .item .item {
+        @apply ml-4;
+    }
+
+    .tw-side-bar-ul .first-level ul li .collapser svg path {
+        @apply fill-white;
+    }
+    
+    .tw-side-bar-ul .active .collapser > svg > path {
+        @apply fill-[#001933];
+    }
+  
+    .tw-side-bar-ul .first-level ul .item ul .item {
+        @apply border-l border-l-[#e6ecf1];
+    }
+
+    .tw-side-bar-ul .first-level > ul > .item {
+        @apply ml-0;
+    }
+
+    .tw-side-bar-title {
+        @apply bg-gray-100 text-lg font-bold text-gray-900 flex items-center py-[18px] px-[16px] font-karla;
+    }
+
+    .tw-side-bar-title.tw-side-bar-show {
+        @apply hidden;
+    }
+
+    .tw-side-bar-title a {
+        @apply text-gray-900;
+    }
+
+    #sidebar-tree::-webkit-scrollbar {
+        @apply w-1;
+    }
+    #sidebar-tree::-webkit-scrollbar-thumb {
+        @apply bg-gray-300;
+    }
+
+    /* For some reason, on Firefox 
+     * the tooltip shows up _under_ the scrollbar.
+     * The easy fix is to translate the tooltip
+     * so that it no longer overlaps the edge of the sidebar. 
+     */
+    #sidebar-tree *[data-testid="flowbite-tooltip"] {
+      @apply translate-x-4;
+    }
+    #sidebar-tree *[data-testid="flowbite-tooltip-target"] {
+      @apply items-center flex;
+    }
+
+    /* TAILWIND Sidebar ends */
+
+    .tw-hbox {
+        @apply flex gap-[0.25ch] items-center pr-0
+    }
+
+    .tw-hbox>* {
+        @apply leading-8 align-middle m-0;
+    }
+
+    .tw-hbox input {
+        @apply align-middle m-0
+    }
+
+    .tw-hbox label {
+        @apply whitespace-nowrap;
+    }
+
+    .tw-options-modal-hbox {
+        @apply mb-4 flex gap-6 items-center;
+    }
+
+    .tw-options-modal-hbox>* {
+        @apply leading-8 align-middle m-0;
+    }
+
+    .tw-options-modal-hbox input {
+        @apply align-middle m-0 origin-center-left scale-150;
+    }
+
+    .tw-options-modal-hbox>*:last-child {
+        @apply ml-auto;
+    }
+
+    .tw-switch {
+        @apply cursor-pointer;
+    }
+
+    .tw-switch>* {
+        @apply cursor-pointer;
+    }
+
+    .tw-no-results {
+        @apply 1240px:col-start-1 w-full flex content-center items-center flex-col col-start-2 col-end-3;
+    }
+
+    .tw-no-results p {
+        @apply text-center;
+    }
+
+    /* TAILWIND AIS PAGINATION START */
+
+    .tw-ais-pagination {
+        @apply py-[50px] px-0;
+    }
+
+    .tw-ais-pagination .ais-Pagination {
+        @apply text-indigo-900;
+    }
+
+    .tw-ais-pagination .ais-Pagination-list {
+        @apply m-0 p-0 flex items-center justify-center list-none;
+    }
+
+    .tw-ais-pagination .ais-Pagination-item + .ais-Pagination-item {
+        @apply ml-1;
+    }
+
+    .tw-ais-pagination .ais-Pagination-link {
+        @apply text-blue-600 block rounded transition-bg-color-02 py-[0.3rem] px-[0.6rem] border-1 border-[#c4c8d8] hover:text-[#0073a8] hover:bg-[#e3e5ec] focus:text-[#0073a8] focus:bg-[#e3e5ec];
+    }
+
+    .tw-ais-pagination .ais-Pagination-item--disabled .ais-Pagination-link {
+        @apply cursor-not-allowed text-gray-500 opacity-[0.6] hover:text-gray-500 hover:bg-white focus:text-gray-500 focus:bg-white ;
+    }
+
+    .tw-ais-pagination .ais-Pagination-item--selected .ais-Pagination-link {
+        @apply text-white bg-blue-600 border-blue-600 hover:text-white focus:text-white;
+    }
+    /* TAILWIND AIS PAGINATION END */
+
+    /* BOOTSTRAP missing styles */
+
+    .tsne-visualization-wrapper>.react-transform-wrapper {
+        @apply w-full h-full !important;
+    }
+
+    .tsne-visualization-wrapper>.react-transform-wrapper>.react-transform-component {
+        @apply h-[calc(100vh-2rem)] w-[calc(100vh-2rem)] overflow-visible !important;
+    }
+
+    .tsne-visualization-item>a:not(.incident-card) {
+        @apply absolute text-[75%] h-[2em] w-[2em] px-[2px] rounded-[50%] -ml-[1em] -mt-[1em] text-center leading-[2em] shadow-tsne flex justify-center items-center !important;
+        @apply text-inherit
+    }
+
+    .tsne-visualization-item .incident-card {
+        @apply block min-h-[15em] w-60 rounded-[0.25rem] shadow-tsne absolute p-4 overflow-hidden bg-white !important;
+    }
+
+    .tsne-visualization-item .incident-card img,
+    .tsne-visualization-item .incident-card canvas {
+        @apply -mt-4 -mr-4 mb-2 -ml-4 max-w-[unset] w-[calc(100%+4rem)] h-32 object-cover !important;
+    }
+
+    .tsne-visualization-item .incident-card h3 {
+        @apply text-[100%] m-0 leading-[1.5] !important;
+    }
+
+    .tsne-visualization-item .incident-card:not(:hover) {
+        @apply text-black !important;
+    }
+
+    .tsne-visualization-item> a:hover:not(.current):not(.incident-card) {
+        @apply text-[#ec9982] z-[3] !important;
+    }
+
+    .tsne-visualization-item>a.current {
+        @apply border-[black] shadow-tsne-current !important;
+    }
+
+    .pagination [aria-current="page"] button {
+        @apply bg-blue-50 text-blue-600 !important;
+    }
+
+    .variants-markdown > p:first-child {
+        @apply mt-0;
+    }
+
+    .edit-variant-modal > div:first-child {
+        @apply flex;
+    }
+
+   .incidents-pagination [aria-current="page"] button {
+    @apply bg-blue-50 text-blue-600 !important;
+   }
+
+   .Typeahead .rbt-input-multi .rbt-input-wrapper {
+    @apply bg-gray-50 items-center pl-2.5 !important;
+  }
+
+  .Typeahead .rbt-close {
+    @apply border-none bg-transparent !important;
+  }
+
+  .Typeahead .rbt-input-multi {
+    @apply p-0 !important;
+  }
+
+  .Typeahead input {
+    @apply text-sm leading-5 bg-gray-50 pt-2.5 pr-2.5 pb-2.5 border !important;
+  }
+
+  .Typeahead .rbt-menu.dropdown-menu {
+    @apply bg-white text-gray-800 flex border rounded z-2;
+  }
+
+  .Typeahead .rbt-menu.dropdown-menu .dropdown-item {
+    @apply text-gray-800 border-none block clear-both font-normal whitespace-nowrap w-full px-4 py-2 bg-transparent hover:bg-gray-200;
+  }
+
+  .Typeahead .rbt-menu.dropdown-menu .dropdown-item.active{
+    @apply bg-blue-100 !important;
+  }
+
+  .floating-label-dropdown button {
+    @apply hover:text-blue-500 hover:bg-white hover:border-blue-500 !important;
+  }
+
+  .form-tooltip {
+    @apply p-1 !important;
+  }
+  
+  .edit-div {
+    @apply py-4 px-6 text-right;
+  }
+  .edit-div a {
+    @apply text-sm font-medium leading-4 no-underline text-[#555] border-[#d3dce4] border-1 cursor-pointer rounded transition-all duration-200 ease-out bg-[#fff] shadow-[0,1px,1px,0,rgba(116,129,141,.1)] h-8 px-4;
+  }
+
+  .edit-div a:hover {
+    @apply bg-[#f5f7f9];
+  }
+
+  .styled-main-wrapper {
+    @apply max-w-[800px] text-[#3b454e];
+  }
+  .styled-main-wrapper>ul,
+  .styled-main-wrapper>ol {
+    @apply my-6 mx-0 py-0 pl-0 pr-8;
+  }
+
+  .styled-main-wrapper>ul>li,
+  .styled-main-wrapper>ol>li {
+    @apply text-base leading-6 font-normal;
+  }
+
+  .styled-main-wrapper a {
+    @apply text-[#0d6efd] transition-colors duration-200 ease-out;
+  }
+
+  .styled-main-wrapper code {
+    @apply border-[#ede7f3] border-1 rounded px-[6px] py-[2px] text-[0.9375em] bg-[#fff];
+  }
+
+  .post-styled-main-wrapper {
+    @apply max-w-[750px] text-[#3b454e];
+  }
+
+  .post-styled-main-wrapepr ul,
+  .post-styled-main-wrapepr ol {
+    @apply py-0 pr-0 pl-8;
+  }
+
+  .post-styled-main-wrapper ul li,
+  .post-styled-main-wrapper ol li {
+    @apply text-base leading-7 font-normal;
+  }
+
+  .post-styled-main-wrapper a {
+    @apply transition-colors text-blue-500;
+  }
+
+  .post-styled-main-wrapper code {
+    @apply border border-[#ede713] py-[2px] px-[6px] text-base bg-white;
+  }
+
+  aside.sidebar {
+    @apply max-50rem:w-full max-50rem:relative font-karla text-sm w-full border-r border-r-[#ede7f3] h-screen overflow-auto fixed pl-6 pt-0 bg-text-light-gray top-0;
+  }
+
+  aside.sidebar.right {
+    @apply sticky max-50rem:w-full max-50rem:relative font-karla text-sm w-full border-none h-screen overflow-auto pl-6 pt-0 bg-none bg-transparent top-0;
+  }
+
+  aside.sidebar .rightSideTitle {
+    @apply text-sm leading-4 font-bold uppercase tracking-wider py-2 pr-6 pl-4 border-l border-l-gray-200 text-[rgb(59,69,78)];
+  }
+
+  aside.sidebar .rightSideBarUL {
+    @apply mt-8 p-0;
+  }
+
+  aside.sidebar .rightSideBarUL li {
+    @apply list-none border-l border-l-[#e6ecf1] py-2 pr-6 pl-4;
+  }
+
+  aside.sidebar .rightSideBarUL li a {
+    @apply font-medium leading-6 py-2 pt-6 pb-4 text-[#1a1a1a];
+  }
+
+  [type='checkbox']:checked, [type='radio']:checked, .dark [type='checkbox']:checked, .dark [type='radio']:checked {
+    border-color: transparent !important;
+    background-color: currentColor  !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+  }
+  
+  .reports-table tr td{
+    @apply last:border-b-0;
+  }
+
+  .reports-table th,
+  .reports-table td {
+    @apply m-0 p-2 last:border-r-0;
+  }
+
+  .tw-toast {
+    @apply p-0 mb-2 !important;
+  }
+
+  .tw-toast a {
+    @apply underline text-white !important;
+  }
+
+  .taxonomy-markdown {
+    @apply mt-0 !important;
+  }
+
+  .taxonomy-markdown h1 {
+    @apply text-2xl font-extrabold leading-[1.5] mb-4 mt-8 !important;
+  }
+
+  .taxonomy-markdown p {
+    @apply leading-[1.5] first:mt-0 !important;
+  }
+  
+  .react-markdown pre {
+    @apply table table-fixed w-full !important;
+  }
+
+  .react-markdown pre code {
+    @apply block overflow-auto w-full !important;
+  }
+
+  .react-markdown ul {
+    margin-top: 45px !important;
+  }
+
+  .react-markdown p {
+    overflow-wrap: anywhere;
+  }
+
+  .prose a {
+    @apply text-blue-500 no-underline hover:underline !important;
+  }
+
+  .titleWrapper h1 {
+    @apply font-medium m-0 p-0;
+    @apply leading-10 !important;
+  }
+
+  .latest-reports-carousel *[data-testid="carousel-indicator"] {
+    @apply hidden !important;
+  }
+
+  .editors-dropdown,
+  .editors-dropdown *[data-testid="flowbite-tooltip-target"],
+  .editors-dropdown *[data-testid="flowbite-tooltip-target"] button {
+    @apply w-full !important;
+  }
+
+  .editors-dropdown *[data-testid="flowbite-tooltip-target"] button span {
+    @apply w-full justify-between !important;
+  }
+}

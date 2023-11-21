@@ -1,17 +1,36 @@
 import React from 'react';
-import { Card } from 'react-bootstrap';
 import LatestIncidentReport from 'components/landing/LatestIncidentReport';
-import { Trans } from 'react-i18next';
+import { Carousel } from 'flowbite-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowCircleLeft, faArrowCircleRight } from '@fortawesome/free-solid-svg-icons';
 
-export default function LatestReports({ latestReport }) {
+export default function LatestReports({ latestReports }) {
   return (
-    <Card>
-      <Card.Body>
-        <Card.Title as="h2">
-          <Trans ns="landing">Latest Incident Report</Trans>
-        </Card.Title>
-        <LatestIncidentReport className="mt-3" report={latestReport} />
-      </Card.Body>
-    </Card>
+    <>
+      <Carousel
+        className="latest-reports-carousel"
+        slide={false}
+        leftControl={
+          <FontAwesomeIcon
+            icon={faArrowCircleLeft}
+            className="h-8 w-8 text-white bg-gray-500 shadow rounded-full"
+          />
+        }
+        rightControl={
+          <FontAwesomeIcon
+            icon={faArrowCircleRight}
+            className="h-8 w-8 text-white bg-gray-500 shadow rounded-full"
+          />
+        }
+      >
+        {latestReports.map((report, index) => (
+          <LatestIncidentReport
+            report={report}
+            isLatest={index === 0}
+            key={`latest-report-${report.title}`}
+          />
+        ))}
+      </Carousel>
+    </>
   );
 }

@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { ListGroup } from 'react-bootstrap';
 import { subWeeks, addWeeks, getUnixTime, parse, isValid } from 'date-fns';
 import { gql, useApolloClient } from '@apollo/client';
 import debounce from 'lodash/debounce';
 import isArray from 'lodash/isArray';
+import { Trans } from 'react-i18next';
 import RelatedIncidentsArea from './RelatedIncidentsArea';
-import SemanticallyRelatedIncidents from './SemanticallyRelatedIncidents';
 
 const relatedIncidentsQuery = gql`
   query ProbablyRelatedIncidents($query: IncidentQueryInput) {
     incidents(query: $query) {
       incident_id
+      title
       reports {
         report_number
         title
@@ -45,23 +45,35 @@ const reportsWithIncidentIds = async (reports, client) => {
     },
   });
 
-  return reports.map((report) => ({
-    ...report,
-    incident_id: response.data.incidents.filter((incident) =>
+  return reports.map((report) => {
+    const incident = response.data.incidents.find((incident) =>
       incident.reports
         .map((incidentReport) => incidentReport.report_number)
         .includes(report.report_number)
-    )[0].incident_id,
-  }));
+    );
+
+    return {
+      ...report,
+      title: report.title,
+      incident_title: incident?.title,
+      incident_id: incident?.incident_id,
+    };
+  });
 };
 
-const searchColumns = {
+const allSearchColumns = {
   byDatePublished: {
-    header: (incident) => (
-      <>
-        Incidents reports matched by published date: <b>{incident.date_published}</b>
-      </>
-    ),
+    header: (incident) => {
+      const date = incident.date_published;
+
+      return (
+        <>
+          <Trans date={date}>
+            Incidents reports matched by published date: <b className="break-all">{{ date }}</b>
+          </Trans>
+        </>
+      );
+    },
     query: relatedReportsQuery,
     getReports: async (result, client) => reportsWithIncidentIds(result.data.reports, client),
     isSet: (incident) => {
@@ -71,7 +83,13 @@ const searchColumns = {
       return isValid(parsedDate) && getUnixTime(parsedDate) > 0;
     },
     getQueryVariables: (incident) => {
-      const datePublished = parse(incident.date_published, 'yyyy-MM-dd', new Date());
+      const today = new Date();
+
+      let datePublished = parse(incident.date_published, 'yyyy-MM-dd', today);
+
+      if (datePublished > today) {
+        datePublished = today;
+      }
 
       const epoch_date_published_gt = getUnixTime(subWeeks(datePublished, 2));
 
@@ -82,24 +100,40 @@ const searchColumns = {
   },
 
   byIncidentId: {
-    header: (incident) => (
-      <>
-        Incidents reports matched by ID: <b>{incident.incident_id}</b>
-      </>
-    ),
+    header: (incident) => {
+      const id = incident.incident_id;
+
+      return (
+        <>
+          <Trans id={id}>
+            Incident matched by ID: <b>{{ id }}</b>
+          </Trans>
+        </>
+      );
+    },
     query: relatedIncidentsQuery,
     getReports: async (result) =>
       result.data.incidents.length ? result.data.incidents[0].reports : [],
-    isSet: (incident) => incident.incident_id,
-    getQueryVariables: (incident) => ({ incident_id_in: [incident.incident_id] }),
+    getIncidents: async (result) => result.data.incidents,
+    isSet: (incident) => incident.incident_ids && incident.incident_ids.length,
+    getQueryVariables: (incident) => ({ incident_id_in: incident.incident_ids }),
+    editSimilar: false,
+    editId: false,
+    showIncidents: true,
   },
 
   byAuthors: {
-    header: (incident) => (
-      <>
-        Incidents reports matched by authors: <b>{incident.authors}</b>
-      </>
-    ),
+    header: (incident) => {
+      const authors = incident.authors;
+
+      return (
+        <>
+          <Trans authors={authors}>
+            Incidents reports matched by authors: <b className="break-words">{{ authors }}</b>
+          </Trans>
+        </>
+      );
+    },
     query: relatedReportsQuery,
     getReports: async (result, client) => reportsWithIncidentIds(result.data.reports, client),
     isSet: (incident) => incident.authors,
@@ -109,22 +143,41 @@ const searchColumns = {
   },
 
   byURL: {
-    header: (incident) => (
-      <>
-        Incidents reports matched by URL: <b>{incident.url}</b>
-      </>
-    ),
+    header: (incident) => {
+      const url = incident.url;
+
+      return (
+        <>
+          <Trans url={url}>
+            Incidents reports matched by URL: <b className="break-all">{{ url }}</b>
+          </Trans>
+        </>
+      );
+    },
     query: relatedReportsQuery,
     getReports: async (result, client) => reportsWithIncidentIds(result.data.reports, client),
     isSet: (incident) => incident.url,
     getQueryVariables: (incident) => ({ url_in: [incident.url] }),
+    editSimilar: false,
   },
 };
 
-const RelatedIncidents = ({ incident, setFieldValue = null, editId = true, className = '' }) => {
+const RelatedIncidents = ({
+  incident,
+  setFieldValue = null,
+  columns = Object.keys(allSearchColumns),
+}) => {
+  const searchColumns = {};
+
+  for (const column of columns) {
+    searchColumns[column] = allSearchColumns[column];
+  }
+
   const [loading, setLoading] = useState({});
 
   const [relatedReports, setRelatedReports] = useState({});
+
+  const [relatedIncidents, setRelatedIncidents] = useState({});
 
   const [queryVariables, setQueryVariables] = useState({});
 
@@ -149,7 +202,7 @@ const RelatedIncidents = ({ incident, setFieldValue = null, editId = true, class
 
   useEffect(() => {
     debouncedUpdateSearch(searchColumns, incident);
-  }, [incident.authors, incident.incident_id, incident.date_published, incident.url]);
+  }, [incident.authors, incident.incident_ids, incident.date_published, incident.url]);
 
   const search = useCallback(
     async (key, column) => {
@@ -168,6 +221,12 @@ const RelatedIncidents = ({ incident, setFieldValue = null, editId = true, class
         setLoading((loading) => ({ ...loading, [key]: false }));
 
         setRelatedReports((related) => ({ ...related, [key]: reports }));
+
+        if (searchColumns[key].showIncidents) {
+          const incidents = await column.getIncidents(result, client);
+
+          setRelatedIncidents((related) => ({ ...related, [key]: incidents }));
+        }
       } else {
         setRelatedReports((related) => ({ ...related, [key]: null }));
       }
@@ -183,17 +242,8 @@ const RelatedIncidents = ({ incident, setFieldValue = null, editId = true, class
     }
   }, [queryVariables]);
 
-  if (Object.keys(relatedReports).every((key) => relatedReports?.[key]?.length == 0)) {
-    return (
-      <div className="mt-4" data-cy="empty-message">
-        Preliminary checks failed to find incident reports with similar publication dates (+/- 2
-        weeks), similar incident dates (+/- 1 month), the same report URL, or the same authors.
-      </div>
-    );
-  }
-
   return (
-    <ListGroup data-cy="related-reports" className={className}>
+    <div data-cy="related-reports">
       {Object.keys(searchColumns).map((key) => {
         const column = searchColumns[key];
 
@@ -202,20 +252,18 @@ const RelatedIncidents = ({ incident, setFieldValue = null, editId = true, class
             key={key}
             columnKey={key}
             loading={loading[key]}
-            reports={relatedReports[key]}
+            reports={searchColumns[key].showIncidents ? null : relatedReports[key]}
+            incidents={searchColumns[key].showIncidents ? relatedIncidents[key] : null}
             header={column.header(incident)}
             setFieldValue={setFieldValue}
-            editId={editId}
+            {...{
+              editId: column.editId,
+              editSimilar: column.editSimilar,
+            }}
           />
         );
       })}
-
-      <SemanticallyRelatedIncidents
-        incident={incident}
-        setFieldValue={setFieldValue}
-        editId={editId}
-      />
-    </ListGroup>
+    </div>
   );
 };
 

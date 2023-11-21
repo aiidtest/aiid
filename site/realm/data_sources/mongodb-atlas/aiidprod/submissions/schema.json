@@ -24,8 +24,20 @@
         "date_submitted": {
             "bsonType": "string"
         },
+        "deployers": {
+            "bsonType": "array",
+            "items": {
+                "bsonType": "string"
+            }
+        },
         "description": {
             "bsonType": "string"
+        },
+        "developers": {
+            "bsonType": "array",
+            "items": {
+                "bsonType": "string"
+            }
         },
         "editor_dissimilar_incidents": {
             "bsonType": "array",
@@ -42,14 +54,49 @@
                 "bsonType": "int"
             }
         },
+        "embedding": {
+            "bsonType": "object",
+            "properties": {
+                "from_text_hash": {
+                    "bsonType": "string"
+                },
+                "vector": {
+                    "bsonType": "array",
+                    "items": {
+                        "bsonType": "double"
+                    }
+                }
+            }
+        },
+        "epoch_date_modified": {
+            "bsonType": "int"
+        },
+        "harmed_parties": {
+            "bsonType": "array",
+            "items": {
+                "bsonType": "string"
+            }
+        },
         "image_url": {
             "bsonType": "string"
         },
         "incident_date": {
             "bsonType": "string"
         },
-        "incident_id": {
-            "bsonType": "int"
+        "incident_editors": {
+            "bsonType": "array",
+            "items": {
+                "bsonType": "string"
+            }
+        },
+        "incident_ids": {
+            "bsonType": "array",
+            "items": {
+                "bsonType": "int"
+            }
+        },
+        "incident_title": {
+            "bsonType": "string"
         },
         "language": {
             "bsonType": "string"
@@ -94,23 +141,28 @@
         },
         "url": {
             "bsonType": "string"
+        },
+        "user": {
+            "bsonType": "string"
+        },
+        "status": {
+            "bsonType": "string"
         }
     },
     "required": [
         "authors",
-        "cloudinary_id",
         "image_url",
         "date_downloaded",
         "date_modified",
         "date_published",
         "date_submitted",
-        "description",
         "language",
         "source_domain",
         "submitters",
         "text",
         "title",
-        "url"
+        "url",
+        "tags"
     ],
     "title": "submission"
 }

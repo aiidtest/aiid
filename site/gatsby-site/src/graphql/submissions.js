@@ -20,7 +20,13 @@ export const FIND_SUBMISSIONS = gql`
       description
       image_url
       incident_date
-      incident_id
+      incident_ids
+      incident_editors {
+        first_name
+        last_name
+        userId
+      }
+      incident_title
       language
       source_domain
       text
@@ -37,6 +43,22 @@ export const FIND_SUBMISSIONS = gql`
       editor_similar_incidents
       editor_dissimilar_incidents
       plain_text
+      developers {
+        entity_id
+        name
+      }
+      deployers {
+        entity_id
+        name
+      }
+      harmed_parties {
+        entity_id
+        name
+      }
+      status
+      user {
+        userId
+      }
     }
   }
 `;
@@ -53,7 +75,13 @@ export const FIND_SUBMISSION = gql`
       description
       image_url
       incident_date
-      incident_id
+      incident_ids
+      incident_editors {
+        first_name
+        last_name
+        userId
+      }
+      incident_title
       language
       source_domain
       text
@@ -63,12 +91,25 @@ export const FIND_SUBMISSION = gql`
       url
       editor_notes
       tags
+      developers {
+        entity_id
+        name
+      }
+      deployers {
+        entity_id
+        name
+      }
+      harmed_parties {
+        entity_id
+        name
+      }
       nlp_similar_incidents {
         similarity
         incident_id
       }
       editor_similar_incidents
       editor_dissimilar_incidents
+      status
     }
   }
 `;
@@ -85,7 +126,13 @@ export const UPDATE_SUBMISSION = gql`
       description
       image_url
       incident_date
-      incident_id
+      incident_ids
+      incident_editors {
+        first_name
+        last_name
+        userId
+      }
+      incident_title
       language
       source_domain
       text
@@ -95,6 +142,18 @@ export const UPDATE_SUBMISSION = gql`
       url
       editor_notes
       tags
+      developers {
+        entity_id
+        name
+      }
+      deployers {
+        entity_id
+        name
+      }
+      harmed_parties {
+        entity_id
+        name
+      }
       nlp_similar_incidents {
         similarity
         incident_id
@@ -116,11 +175,8 @@ export const INSERT_SUBMISSION = gql`
 export const PROMOTE_SUBMISSION = gql`
   mutation PromoteSubmission($input: PromoteSubmissionToReportInput!) {
     promoteSubmissionToReport(input: $input) {
-      incident_id
-      reports {
-        report_number
-        ref_number
-      }
+      incident_ids
+      report_number
     }
   }
 `;

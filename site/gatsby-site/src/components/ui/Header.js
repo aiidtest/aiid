@@ -1,113 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import React, { useState } from 'react';
 import { StaticQuery, graphql } from 'gatsby';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faRssSquare } from '@fortawesome/free-solid-svg-icons';
-import { faTwitterSquare, faGithubSquare } from '@fortawesome/free-brands-svg-icons';
-
+import {
+  faSquareXTwitter,
+  faGithubSquare,
+  faFacebookSquare,
+  faLinkedin,
+} from '@fortawesome/free-brands-svg-icons';
+import LoginSignup from 'components/loginSignup';
+import logoImg from '../images/logo.svg';
 import Link from './Link';
 import config from '../../../config.js';
 
 import Sidebar from '../sidebar';
 import LanguageSwitcher from 'components/i18n/LanguageSwitcher';
 
-const SkipToContent = styled.a`
-  color: white;
-  background-color: #001934;
-  position: relative;
-  order: 1;
-  margin-left: auto;
-  opacity: 0;
-  width: 0px;
-  height: 0px;
-  overflow: hidden;
-  :focus {
-    opacity: 1;
-    padding: 0ch 1ch;
-    width: unset;
-    height: unset;
-  }
-  @media (max-width: 767px) {
-    font-size: 12px !important;
-  }
-`;
-
-const NavBarHeaderContainer = styled.div`
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  .navbarHeader {
-    order: 0;
-  }
-  .divider {
-    width: 1px;
-  }
-  .navBarBrand > * {
-    flex-shrink: 0;
-  }
-  .navBarBrand > .headerTitle {
-    flex-shrink: 1;
-  }
-`;
-
-const HeaderIconsContainer = styled.div`
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  order: 2;
-  .paddingAround {
-    padding-right: 10px;
-  }
-`;
-
-const HideOnDesktop = styled.div`
-  @media (min-width: 767px) {
-    display: none;
-  }
-`;
-
-const StarsCount = (props) => {
-  const [count, setCount] = useState(null);
-
-  useEffect(() => {
-    if (!count) {
-      fetch('https://api.github.com/repos/' + props.repo)
-        .then((res) => res.json())
-        .then((json) => {
-          setCount(json['stargazers_count']);
-        });
-    }
-  });
-  return (
-    <a
-      target="_blank"
-      className={props.className}
-      href={'https://github.com/' + props.repo + '/stargazers'}
-      style={{
-        color: 'white',
-        marginLeft: '3px',
-        marginRight: '8px',
-        width: '2em',
-        marginTop: '-2px',
-        display: 'inline-block',
-        textDecoration: 'none',
-      }}
-      rel="noreferrer"
-    >
-      {count ? '★' + count : ''}
-    </a>
-  );
-};
-
-const Header = () => {
-  const logoImg = require('../images/logo.svg');
-
+const Header = ({ location = null }) => {
   const [navCollapsed, setNavCollapsed] = useState(true);
-
-  const topClass = navCollapsed ? 'topnav' : 'topnav responsive ';
 
   return (
     <StaticQuery
@@ -117,16 +27,14 @@ const Header = () => {
             siteMetadata {
               headerTitle
               githubUrl
+              facebookUrl
+              linkedInUrl
               helpUrl
               tweetText
               logo {
                 link
                 image
                 mobile
-              }
-              headerLinks {
-                link
-                text
               }
             }
           }
@@ -135,126 +43,159 @@ const Header = () => {
       render={(data) => {
         const {
           site: {
-            siteMetadata: { headerTitle, githubUrl, logo, headerLinks },
+            siteMetadata: { headerTitle, githubUrl, logo, facebookUrl, linkedInUrl },
           },
         } = data;
 
         const finalLogoLink = logo.link !== '' ? logo.link : 'https://incidentdatabase.ai/';
 
+        var SocialMediaIcons = () =>
+          config.header.social && (
+            <div className="hidden md:flex wrap-0 gap-2 items-center">
+              <a href={'https://twitter.com/IncidentsDB'} target="_blank" rel="noreferrer">
+                <FontAwesomeIcon
+                  titleId="twitter"
+                  icon={faSquareXTwitter}
+                  color={'white'}
+                  className="pointer fa fa-twitter-square fa-lg"
+                  title="Open Twitter"
+                />
+              </a>
+              <a href={'/rss.xml'} target="_blank" rel="noopener noreferrer">
+                <FontAwesomeIcon
+                  titleId="rss"
+                  icon={faRssSquare}
+                  color={'white'}
+                  className="pointer fa fa-rss-square fa-lg"
+                  title="Open RSS Feed"
+                />
+              </a>
+              <a
+                className="paddingAround hiddenMobile"
+                href={facebookUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FontAwesomeIcon
+                  titleId="facebook"
+                  icon={faFacebookSquare}
+                  color={'white'}
+                  className="pointer fa fa-rss-square fa-lg"
+                  title="Open RSS Feed"
+                />
+              </a>
+              <a
+                className="paddingAround hiddenMobile"
+                href={linkedInUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FontAwesomeIcon
+                  titleId="linkedin"
+                  icon={faLinkedin}
+                  color={'white'}
+                  className="pointer fa fa-rss-square fa-lg"
+                  title="Open RSS Feed"
+                />
+              </a>
+              <a href={githubUrl} target="_blank" rel="noreferrer" className="pr-2">
+                <FontAwesomeIcon
+                  titleId="github"
+                  icon={faGithubSquare}
+                  color={'white'}
+                  className="pointer fa fa-github-square fa-lg -mr-2"
+                  title="Open GitHub"
+                />
+              </a>
+            </div>
+          );
+
+        var HeaderLink = ({ className }) => (
+          <Link to={finalLogoLink} className={`hover:no-underline flex items-center ${className}`}>
+            <div className="md:w-64 text-center">
+              <img
+                className={'hidden md:inline ml-[10px] mr-[10px] w-[200px]'}
+                src={logo.image !== '' ? logo.image : logoImg}
+                alt={'logo'}
+                loading="lazy"
+              />
+              <img
+                className="md:hidden w-[50px]"
+                src={logo.mobile !== '' ? logo.mobile : logoImg}
+                alt={'logo'}
+                loading="lazy"
+              />
+            </div>
+            <Divider />
+            <span
+              className="inline-block ml-4 md:ml-10 font-semibold text-xs  md:text-base md:uppercase"
+              dangerouslySetInnerHTML={{ __html: headerTitle }}
+            />
+          </Link>
+        );
+
+        var SkipToContent = ({ className }) => (
+          <a
+            href="#content"
+            className={`
+              ${className}
+              relative 
+              overflow-hidden
+              text-white
+              bg-transparent 
+              text-xs
+              opacity-0 focus:opacity-100
+              w-0       focus:w-[unset]
+              h-0       focus:h-[unset]
+                        focus:px-[1ch]   
+            `}
+          >
+            Skip to Content
+          </a>
+        );
+
         return (
-          <nav className={'navBarDefault'}>
-            <NavBarHeaderContainer>
-              <SkipToContent href="#content">Skip to Content</SkipToContent>
-              <div className={'navBarHeader'}>
-                <Link to={finalLogoLink} className={'navBarBrand'}>
-                  <img
-                    id="desktopLogo"
-                    className={'hiddenMobile'}
-                    style={{ width: 200 }}
-                    src={logo.image !== '' ? logo.image : logoImg}
-                    alt={'logo'}
-                  />
-                  <HideOnDesktop>
-                    <img
-                      style={{ width: 50 }}
-                      src={logo.mobile !== '' ? logo.mobile : logoImg}
-                      alt={'logo'}
-                    />
-                  </HideOnDesktop>
-                  <div className="divider hiddenMobile"></div>
-                  <div
-                    className={'headerTitle displayInline'}
-                    dangerouslySetInnerHTML={{ __html: headerTitle }}
-                  />
-                </Link>
+          <nav id="navBarDefault" className="bg-[#001934] shadow">
+            <div className=" text-white flex flex-row items-center w-full p-4 md:pl-0 h-[80px]">
+              <SkipToContent className="-order-1 mx-2" />
+
+              <HeaderLink className="-order-3" />
+
+              <div className="mx-auto -order-2" />
+
+              <LanguageSwitcher className="mr-3 md:mr-0" />
+
+              <Divider className="mx-4" />
+
+              <SocialMediaIcons />
+
+              <div className="block md:hidden">
+                <FontAwesomeIcon
+                  titleId="bars"
+                  icon={faBars}
+                  color={'white'}
+                  className="pointer fa fa-BARS fa-lg"
+                  style={{ cursor: 'pointer' }}
+                  title="Open Menu"
+                  onClick={() => setNavCollapsed(!navCollapsed)}
+                />
               </div>
-              <HeaderIconsContainer>
-                <LanguageSwitcher className="me-3 me-md-0" />
-                <li className="divider hiddenMobile"></li>
-                {config.header.social && (
-                  <a
-                    className="paddingAround hiddenMobile"
-                    href={'https://twitter.com/IncidentsDB'}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <FontAwesomeIcon
-                      icon={faTwitterSquare}
-                      color={'white'}
-                      className="pointer fa fa-twitter-square fa-lg"
-                      title="Open Twitter"
-                    />
-                  </a>
-                )}
-                <a
-                  className="paddingAround hiddenMobile"
-                  href={'/rss.xml'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <FontAwesomeIcon
-                    icon={faRssSquare}
-                    color={'white'}
-                    className="pointer fa fa-rss-square fa-lg"
-                    title="Open RSS Feed"
-                  />
-                </a>
-                {config.header.social && (
-                  <>
-                    <a
-                      className="paddingAround hiddenMobile"
-                      href={githubUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ paddingRight: '0px' }}
-                    >
-                      <FontAwesomeIcon
-                        icon={faGithubSquare}
-                        color={'white'}
-                        className="pointer fa fa-github-square fa-lg"
-                        title="Open GitHub"
-                      />
-                    </a>
-                    <StarsCount
-                      className="hiddenMobile"
-                      repo={githubUrl.replace('https://github.com/', '')}
-                    />
-                  </>
-                )}
-                <HideOnDesktop>
-                  <FontAwesomeIcon
-                    icon={faBars}
-                    color={'white'}
-                    className="pointer fa fa-BARS fa-lg"
-                    style={{ cursor: 'pointer' }}
-                    title="Open Menu"
-                    onClick={() => setNavCollapsed(!navCollapsed)}
-                  />
-                </HideOnDesktop>
-              </HeaderIconsContainer>
-            </NavBarHeaderContainer>
-            <div id="navbar" className={topClass}>
-              <div className={'visibleMobile'}>
-                <Sidebar setNavCollapsed={setNavCollapsed} />
-                <hr />
-              </div>
-              <ul className={'navBarUL navBarNav navBarULRight'}>
-                {headerLinks.map((link, key) => {
-                  if (link.link !== '' && link.text !== '') {
-                    return (
-                      <li key={key}>
-                        <a
-                          className="sidebarLink"
-                          href={link.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          dangerouslySetInnerHTML={{ __html: link.text }}
-                        />
-                      </li>
-                    );
-                  }
-                })}
-              </ul>
+              <LoginSignup
+                className="hidden lg:flex ml-4"
+                logoutClassName="text-white hover:text-primary-blue"
+                loginClassName="text-white hover:text-primary-blue"
+                location={location}
+              />
+            </div>
+            <div
+              id="navbar"
+              className={
+                navCollapsed
+                  ? 'hidden border-none'
+                  : 'bg-inherit block md:hidden border-none relative z-10 pb-0'
+              }
+            >
+              <Sidebar setNavCollapsed={setNavCollapsed} />
             </div>
           </nav>
         );
@@ -262,5 +203,9 @@ const Header = () => {
     />
   );
 };
+
+var Divider = ({ className }) => (
+  <span className={`divider hidden md:inline-block w-px h-[30px] bg-gray-400 ${className}`} />
+);
 
 export default Header;

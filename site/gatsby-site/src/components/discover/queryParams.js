@@ -1,4 +1,10 @@
-import { StringParam, createEnumParam, withDefault, NumberParam } from 'use-query-params';
+import {
+  StringParam,
+  createEnumParam,
+  withDefault,
+  NumberParam,
+  BooleanParam,
+} from 'use-query-params';
 
 const DisplayModeEnumParam = withDefault(
   createEnumParam(['details', 'compact', 'list']),
@@ -21,6 +27,11 @@ const queryConfig = {
   epoch_date_published_max: StringParam,
   display: DisplayModeEnumParam,
   page: withDefault(NumberParam, 1),
+  hideDuplicates: BooleanParam,
+  is_incident_report: withDefault(StringParam, 'true'),
+  sortBy: withDefault(StringParam, 'relevance'),
+  tags: StringParam,
+  language: StringParam,
 };
 
 export { queryConfig, DisplayModeEnumParam, LanguageEnumParam };

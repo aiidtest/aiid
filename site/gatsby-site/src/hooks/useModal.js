@@ -1,18 +1,7 @@
 import React from 'react';
 import { useState } from 'react';
-import { Modal, Button } from 'react-bootstrap';
 import { Trans } from 'react-i18next';
-import styled from 'styled-components';
-
-const StyledModal = styled(Modal)`
-  .modal-dialog {
-    max-width: 80%;
-
-    @media only screen and (max-width: 800px) {
-      max-width: 100%;
-    }
-  }
-`;
+import { Button, Modal } from 'flowbite-react';
 
 export const useModal = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -36,15 +25,19 @@ export const useModal = () => {
 };
 
 export const CustomModal = ({ close, isOpen, target }) => (
-  <StyledModal show={isOpen} onHide={close}>
-    <Modal.Header closeButton>
-      <Modal.Title>{target.title}</Modal.Title>
-    </Modal.Header>
-    <Modal.Body>{target.body()}</Modal.Body>
-    <Modal.Footer>
-      <Button variant="secondary" onClick={close}>
-        <Trans>Close</Trans>
-      </Button>
-    </Modal.Footer>
-  </StyledModal>
+  <>
+    {isOpen && (
+      <Modal className="max-w-[80%] 800px:max-w-full" show={isOpen} onClose={close}>
+        <Modal.Header>
+          <h4>{target.title}</h4>
+        </Modal.Header>
+        <Modal.Body>{target.body()}</Modal.Body>
+        <Modal.Footer>
+          <Button color="gray" onClick={close}>
+            <Trans>Close</Trans>
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    )}
+  </>
 );

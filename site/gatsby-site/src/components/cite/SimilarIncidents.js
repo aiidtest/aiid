@@ -1,132 +1,26 @@
 import React, { useState } from 'react';
-import styled from 'styled-components';
-import { Card, Button } from 'react-bootstrap';
-import { formatISO, format, parse } from 'date-fns';
+import { formatISO, format, parse, getUnixTime } from 'date-fns';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFlag, faQuestionCircle, faEdit } from '@fortawesome/free-solid-svg-icons';
 import { Image } from '../../utils/cloudinary';
 import { fill } from '@cloudinary/base/actions/resize';
-import { useMutation } from '@apollo/client/react/hooks';
-import { UPDATE_INCIDENT } from '../../graphql/incidents';
+import { useMutation, useQuery } from '@apollo/client/react/hooks';
+import { FIND_FULL_INCIDENT, UPDATE_INCIDENT } from '../../graphql/incidents';
 import md5 from 'md5';
 import { useUserContext } from 'contexts/userContext';
 import useToastContext, { SEVERITY } from '../../hooks/useToast';
-import { useLocalization } from 'gatsby-theme-i18n';
+import { useLogIncidentHistory } from '../../hooks/useLogIncidentHistory';
+import Button from '../../elements/Button';
+import { useLocalization, LocalizedLink } from 'plugins/gatsby-theme-i18n';
 import { Trans, useTranslation } from 'react-i18next';
 import Link from 'components/ui/Link';
 
 const blogPostUrl = '/blog/using-ai-to-connect-ai-incidents';
 
-const SimilarIncidentsList = styled.div`
-  margin-top: 2em;
-  margin-bottom: 2em;
-
-  .card {
-    overflow: hidden;
-    box-shadow: 0 2px 5px 0px #e3e5ec;
-
-    a:not(:hover) {
-      color: inherit;
-    }
-    h3 {
-      margin: 1rem 1rem 0.5rem 1rem;
-      font-size: 16pt;
-      hyphens: auto;
-    }
-  }
-  p + .card {
-    margin-top: 0px;
-  }
-  h2 {
-    font-size: 200%;
-  }
-`;
-
-const IncidentCardImage = styled(Image)`
-  object-fit: cover;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-`;
-
-const CardFooter = styled.div`
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  font-weight: 500;
-  margin: 0rem 1rem 1rem 1rem;
-`;
-
-const FlexSeparator = styled.div`
-  display: inline-block;
-  margin-left: auto;
-  margin-right: auto;
-`;
-
-const Subtitle = styled.p`
-  font-size: 120%;
-  font-weight: bold;
-  svg {
-    margin-left: 0.5ch;
-  }
-`;
-
-const ActionIcons = styled.span`
-  display: inline-flex;
-  align-items: center;
-  > * {
-    margin-left: 0.25ch;
-    margin-right: 0.25ch;
-  }
-`;
-
-const EditIcon = styled.a`
-  vertical-align: middle;
-  margin-top: -0.125em;
-`;
-
-const FlagPrompt = styled.p`
-  margin-top: 1em;
-  margin-bottom: 1em;
-  svg {
-    margin-left: 0.5ch;
-    margin-right: 0.5ch;
-  }
-`;
-
-const FlagButton = styled(Button)`
-  padding: 0px !important;
-  color: var(--bs-gray-600) !important;
-  &:hover {
-    color: var(--bs-gray-500) !important;
-  }
-  &.flagged {
-    color: var(--bs-red) !important;
-  }
-`;
-
-const CardSet = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1em;
-  margin-bottom: 2em;
-  @media (min-width: 1300px) {
-    flex-direction: row;
-
-    > * {
-      flex-basis: 0;
-      flex-grow: 1;
-    }
-  }
-
-  > * {
-    max-width: 700px;
-  }
-`;
-
 const SimilarIncidentCard = ({ incident, flaggable = true, flagged, parentIncident }) => {
   const parsedDate = incident.date ? parse(incident.date, 'yyyy-MM-dd', new Date()) : null;
 
-  const { isRole } = useUserContext();
+  const { isRole, user } = useUserContext();
 
   const { locale } = useLocalization();
 
@@ -134,24 +28,95 @@ const SimilarIncidentCard = ({ incident, flaggable = true, flagged, parentIncide
 
   const [isFlagged, setFlagged] = useState(flagged && isRole('incident_editor'));
 
-  const [updateIncident] = useMutation(UPDATE_INCIDENT);
+  const [updateIncidentMutation] = useMutation(UPDATE_INCIDENT);
+
+  const { data: incidentData } = useQuery(FIND_FULL_INCIDENT, {
+    variables: { query: { incident_id: parentIncident.incident_id } },
+  });
 
   const addToast = useToastContext();
 
+  const { logIncidentHistory } = useLogIncidentHistory();
+
+  const flagIncident = async () => {
+    const now = new Date();
+
+    const flagged_dissimilar_incidents = isFlagged
+      ? parentIncident.flagged_dissimilar_incidents?.filter((e) => e != incident.incident_id)
+      : parentIncident.flagged_dissimilar_incidents
+          ?.filter((e) => e != incident.incident_id)
+          .concat([incident.incident_id]);
+
+    const editors = incidentData.incident.editors.map((e) => e.userId);
+
+    // Add the current user to the list of editors
+    if (user && user.providerType != 'anon-user' && !editors.includes(user.id)) {
+      editors.push(user.id);
+    }
+
+    await updateIncidentMutation({
+      variables: {
+        query: { incident_id: parentIncident.incident_id },
+        set: {
+          flagged_dissimilar_incidents,
+          epoch_date_modified: getUnixTime(now),
+          editors: { link: editors },
+        },
+      },
+    });
+
+    await logIncidentHistory(
+      {
+        ...incidentData.incident,
+        flagged_dissimilar_incidents,
+        epoch_date_modified: getUnixTime(now),
+        editors: { link: editors },
+      },
+      user
+    );
+
+    addToast({
+      message: isFlagged
+        ? t(`Flag reverted.`)
+        : t(
+            `Incident flagged successfully. Our editors will remove it from this list if it not relevant.`
+          ),
+      severity: SEVERITY.success,
+    });
+    setFlagged(!isFlagged);
+  };
+
   return (
-    <Card data-cy="similar-incident-card">
-      <Link to={'/cite/' + incident.incident_id} data-cy="cite-link">
-        <IncidentCardImage
-          publicID={
-            incident.reports[0].cloudinary_id || `legacy/${md5(incident.reports[0].image_url)}`
-          }
-          transformation={fill().height(480)}
-          alt=""
-        />
-        <h3>{locale == 'en' && incident.title ? incident.title : incident.reports[0].title}</h3>
-      </Link>
-      <CardFooter>
-        <div className="text-muted">
+    <div
+      data-cy="similar-incident-card"
+      className="max-w-sm bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700 pb-4"
+    >
+      <LocalizedLink
+        to={`/cite/${incident.incident_id}`}
+        data-cy="cite-link"
+        className="hover:no-underline"
+      >
+        {(incident.reports[0].cloudinary_id || incident.reports[0]?.image_url) && (
+          <div className="object-cover w-full aspect-[16/9]">
+            <Image
+              publicID={
+                incident.reports[0]?.cloudinary_id ||
+                `legacy/${md5(incident.reports[0]?.image_url)}`
+              }
+              transformation={fill().height(480)}
+              alt={incident.title}
+              itemIdentifier={t('Incident {{id}}', { id: incident.incident_id }).replace(' ', '.')}
+              className="rounded-t-lg"
+            />
+          </div>
+        )}
+
+        <h3 className="text-base m-4 text-gray-900 hover:text-primary-blue">
+          {locale == 'en' && incident.title ? incident.title : incident.reports[0].title}
+        </h3>
+      </LocalizedLink>
+      <div className="flex w-full flex-row items-center mt-0 pr-4 bottom-4">
+        <div className="text-sm text-gray-500 dark:text-gray-400 mx-4">
           {parsedDate && (
             <>
               <time dateTime={formatISO(parsedDate)}>{format(parsedDate, 'MMM yyyy')}</time> ·{' '}
@@ -161,44 +126,22 @@ const SimilarIncidentCard = ({ incident, flaggable = true, flagged, parentIncide
             {incident.reports.length} {incident.reports.length == 1 ? t('report') : t('reports')}
           </span>
         </div>
-        <FlexSeparator />
+        <div className="inline-block ml-auto mr-auto" />
 
         {flaggable && (
-          <FlagButton
+          <Button
             variant="link"
-            className={isFlagged ? ' flagged' : ''}
+            className={`p-0 hover:text-gray-500 ${
+              isFlagged ? ' text-red-500' : 'text-dark-gray'
+            } z-3`}
             data-cy="flag-similar-incident"
-            onClick={async () => {
-              await updateIncident({
-                variables: {
-                  query: { incident_id: parentIncident.incident_id },
-                  set: {
-                    flagged_dissimilar_incidents: isFlagged
-                      ? parentIncident.flagged_dissimilar_incidents.filter(
-                          (e) => e != incident.incident_id
-                        )
-                      : parentIncident.flagged_dissimilar_incidents
-                          .filter((e) => e != incident.incident_id)
-                          .concat([incident.incident_id]),
-                  },
-                },
-              });
-              addToast({
-                message: isFlagged
-                  ? t(`Flag reverted.`)
-                  : t(
-                      `Incident flagged successfully. Our editors will remove it from this list if it not relevant.`
-                    ),
-                severity: SEVERITY.success,
-              });
-              setFlagged(!isFlagged);
-            }}
+            onClick={() => flagIncident()}
           >
-            <FontAwesomeIcon icon={faFlag} />
-          </FlagButton>
+            <FontAwesomeIcon icon={faFlag} className="hover:text-primary-blue" />
+          </Button>
         )}
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 };
 
@@ -208,8 +151,10 @@ const SimilarIncidents = ({
   editor_similar_incidents,
   editor_dissimilar_incidents,
   flagged_dissimilar_incidents,
+  orientation = null,
+  className = '',
 }) => {
-  const { isRole } = useUserContext();
+  const { isRole, loading } = useUserContext();
 
   nlp_similar_incidents ||= [];
   editor_dissimilar_incidents ||= [];
@@ -225,67 +170,89 @@ const SimilarIncidents = ({
   );
 
   return (
-    <SimilarIncidentsList>
+    <div className={`tw-similar-incidents ${className}`}>
       {(editor_similar_incidents.length > 0 || nlp_only_incidents.length > 0) && (
-        <h2 id="similar-incidents">
-          <Trans>Similar Incidents</Trans>
-        </h2>
+        <LocalizedLink
+          to={'/summaries/spatial?incident=' + parentIncident.incident_id}
+          className="hover:no-underline"
+        >
+          <h1 id="similar-incidents" className="text-xl dark:text-white w-full inline leading-9">
+            <Trans>Similar Incidents</Trans>
+          </h1>
+        </LocalizedLink>
       )}
       {editor_similar_incidents.length > 0 && (
         <>
-          <Subtitle>
-            <Trans>Selected by our editors</Trans>
-            {isRole('incident_editor') && (
-              <EditIcon
+          <div className="flex gap-2 items-center mt-2">
+            <h5 className="text-base tracking-tight text-gray-900 dark:text-white relative block mb-0">
+              <Trans>Selected by our editors</Trans>
+            </h5>
+            {!loading && isRole('incident_editor') && (
+              <a
+                className="tw-edit-icon"
                 href={`/incidents/edit?incident_id=${parentIncident.incident_id}#similar-incidents`}
                 title="Change the displayed similar incidents"
                 data-cy="edit-similar-incidents"
               >
-                <FontAwesomeIcon icon={faEdit} />
-              </EditIcon>
+                <FontAwesomeIcon icon={faEdit} className="text-gray-700 hover:text-primary-blue" />
+              </a>
             )}
-          </Subtitle>
-          <CardSet>
+          </div>
+          <div
+            className={(orientation == 'column' ? 'flex flex-col gap-5' : 'tw-card-set') + ' mt-5'}
+          >
             {editor_similar_incidents.map((similarIncident) => (
               <SimilarIncidentCard
                 incident={similarIncident}
                 flaggable={false}
                 key={similarIncident.incident_id}
+                parentIncident={parentIncident}
               />
             ))}
-          </CardSet>
+          </div>
         </>
       )}
 
       {nlp_only_incidents.length > 0 && (
         <>
-          <Subtitle>
-            <Trans>By textual similarity</Trans>
-            <ActionIcons>
+          <div className="flex gap-2 items-center mt-2">
+            <h5 className="text-base tracking-tight text-gray-900 dark:text-white relative block mb-0">
+              <Trans>By textual similarity</Trans>
+            </h5>
+            <span className="flex gap-2 items-center">
               {blogPostUrl && (
                 <Link to={blogPostUrl} data-cy="about-similar-incidents">
-                  <FontAwesomeIcon icon={faQuestionCircle} />
+                  <FontAwesomeIcon
+                    icon={faQuestionCircle}
+                    className="text-gray-700 hover:text-primary-blue"
+                  />
                 </Link>
               )}
-              {isRole('incident_editor') && (
-                <EditIcon
+              {!loading && isRole('incident_editor') && (
+                <a
+                  className="tw-edit-icon"
                   href={`/incidents/edit?incident_id=${parentIncident.incident_id}#similar-incidents`}
                   title="Change the displayed similar incidents"
                   data-cy="edit-similar-incidents"
                 >
-                  <FontAwesomeIcon icon={faEdit} />
-                </EditIcon>
+                  <FontAwesomeIcon
+                    icon={faEdit}
+                    className="text-gray-700 hover:text-primary-blue"
+                  />
+                </a>
               )}
-            </ActionIcons>
-          </Subtitle>
-          <hr />
-          <FlagPrompt className="text-muted">
+            </span>
+          </div>
+          <p className="mt-2">
             <Trans>
-              Did <strong>our</strong> AI mess up? Flag <FontAwesomeIcon icon={faFlag} /> the
-              unrelated incidents
+              Did <strong>our</strong> AI mess up? Flag{' '}
+              <FontAwesomeIcon icon={faFlag} className="mx-1 text-dark-gray" /> the unrelated
+              incidents
             </Trans>
-          </FlagPrompt>
-          <CardSet>
+          </p>
+          <div
+            className={(orientation == 'column' ? 'flex flex-col gap-5' : 'tw-card-set') + ' mt-5'}
+          >
             {nlp_only_incidents.map((similarIncident) => (
               <SimilarIncidentCard
                 incident={similarIncident}
@@ -294,10 +261,10 @@ const SimilarIncidents = ({
                 parentIncident={parentIncident}
               />
             ))}
-          </CardSet>
+          </div>
         </>
       )}
-    </SimilarIncidentsList>
+    </div>
   );
 };
 
