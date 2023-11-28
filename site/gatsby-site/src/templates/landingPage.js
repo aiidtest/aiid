@@ -58,6 +58,10 @@ const LandingPage = (props) => {
           <Hero />
         </div>
 
+        <div>
+          test
+        </div>
+
         <div className="mb-10">
           <QuickSearch />
         </div>
