@@ -56,6 +56,7 @@ const LandingPage = (props) => {
       <Container>
         <div>
           <Hero />
+          another one
         </div>
 
         <div className="mb-10">
