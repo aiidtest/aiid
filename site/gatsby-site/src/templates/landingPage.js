@@ -59,7 +59,7 @@ const LandingPage = (props) => {
         </div>
 
         <div>
-          test
+          bue
         </div>
 
         <div className="mb-10">
