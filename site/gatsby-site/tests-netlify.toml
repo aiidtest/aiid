@@ -3,6 +3,3 @@
 
 [build.processing.html]
   pretty_urls = false
-
-[build.environment]
-  NODE_ENV = "test"
