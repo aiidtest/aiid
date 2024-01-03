@@ -110,6 +110,21 @@ exports.onCreateWebpackConfig = ({ actions }) => {
   });
 };
 
+exports.onCreateBabelConfig = ({ actions }) => {
+  actions.setBabelPlugin({
+    name: '@babel/plugin-proposal-export-default-from',
+  });
+
+  if (process.env.INSTRUMENT) {
+    actions.setBabelPlugin({
+      name: 'babel-plugin-istanbul',
+      options: {
+        include: ['src/**/*.js'],
+      },
+    });
+  }
+};
+
 exports.onCreateNode = async ({ node, getNode, actions }) => {
   const { createNodeField } = actions;
 
