@@ -121,7 +121,6 @@
     "autoprefixer": "^10.4.7",
     "babel-eslint": "^10.1.0",
     "babel-plugin-istanbul": "^6.1.1",
-    "babel-preset-gatsby": "^3.13.0",
     "cypress": "^13.0.0",
     "cypress-wait-for-stable-dom": "^0.1.0",
     "eslint": "^7.17.0",
