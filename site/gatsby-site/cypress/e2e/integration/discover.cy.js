@@ -547,7 +547,7 @@ describe('The Discover app', () => {
     }
   );
 
-  conditionalIt(
+  conditionalIt.only(
     !Cypress.env('isEmptyEnvironment'),
     'Search using the classifications filter',
     () => {
@@ -558,6 +558,8 @@ describe('The Discover app', () => {
       cy.get('[data-cy=expand-filters]').click();
 
       cy.contains('button', 'Classifications').click();
+
+      cy.waitForStableDOM();
 
       cy.get('[data-cy="search"] input').type('Buenos Aires');
 

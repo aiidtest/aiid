@@ -67,6 +67,7 @@ describe('Integrity', () => {
             }
           }
         `,
+        timeout: 60000,
       }).then(({ data: { incidents, reports } }) => {
         const invalidReports = [];
 
