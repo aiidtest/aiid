@@ -39,6 +39,18 @@ jobs:
     permissions:
       pull-requests: write
     steps:
+
+      - name: Cleanup Disk Space
+        run: |
+          echo "Before removing files:"
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          echo "After removing files:"
+          df -h
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -101,6 +113,10 @@ jobs:
           CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
           REALM_GRAPHQL_API_KEY: ${{ secrets.REALM_GRAPHQL_API_KEY }}
           GATSBY_COMMIT_SHA: ${{ inputs.sha }}
+
+      - name: Disk Space Status
+        run: |
+          df -h
 
       - name: Upload to netlify
         id: deploy-netlify
