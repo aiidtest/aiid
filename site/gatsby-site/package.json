@@ -144,6 +144,8 @@
     "@types/jest": "^29.5.12",
     "@types/supertest": "^6.0.2",
     "@types/node": "^20.12.13",
+    "@types/jest": "^29.5.12",
+    "@types/supertest": "^6.0.2",
     "autoprefixer": "^10.4.7",
     "babel-eslint": "^10.1.0",
     "babel-plugin-istanbul": "^6.1.1",
