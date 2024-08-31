@@ -185,7 +185,7 @@ test.describe('Submitted reports', () => {
 
         await page.locator('[data-cy="promote-button"]').click();
 
-        await expect(page.locator('[data-cy="toast"]')).toContainText('Successfully promoted submission to Issue 9');
+        await expect(page.locator('[data-cy="toast"]').first()).toContainText('Successfully promoted submission to Issue 9');
 
         const { data: { reports } } = await query({
             query: gql`{
@@ -562,7 +562,7 @@ test.describe('Submitted reports', () => {
     });
 
     test('Edits a submission - links to existing incident - Incident Data should be hidden', async ({ page, login }) => {
-        
+
         await init();
 
         await login(config.E2E_ADMIN_USERNAME, config.E2E_ADMIN_PASSWORD, { customData: { first_name: 'Test', last_name: 'User', roles: ['incident_editor'] } });
