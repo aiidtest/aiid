@@ -135,6 +135,10 @@ jobs:
           SHARD_TOTAL: ${{ matrix.shardTotal }}
           TEST_FOLDER: playwright/e2e-full/
 
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+        if: ${{ !cancelled() }}
+
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
