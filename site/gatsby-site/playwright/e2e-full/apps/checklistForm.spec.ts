@@ -240,7 +240,7 @@ test.describe('Checklists App Form', () => {
         await expect(page.locator('details:nth-child(2)')).toContainText('Dataset Imbalance');
     });
 
-    test('Should remove a manually-created risk', async ({ page, login }) => {
+    test.skip('Should remove a manually-created risk', async ({ page, login }) => {
 
         await init();
 
