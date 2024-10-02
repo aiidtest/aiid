@@ -72,7 +72,7 @@ export const mutationFields: GraphQLFieldConfigMap<any, Context> = {
                 throw new Error('Submission not found');
             }
 
-            const { _id: undefined, ...submission } = target;
+            const { _id: undefined, ...submission }: DBSubmission = target;
 
             const parentIncidents: DBIncident[] = await incidents.find({ incident_id: { $in: input.incident_ids } }).toArray();
 
@@ -106,7 +106,7 @@ export const mutationFields: GraphQLFieldConfigMap<any, Context> = {
                         nlp_similar_incidents: submission.nlp_similar_incidents || [],
                         editor_similar_incidents: submission.editor_similar_incidents || [],
                         editor_dissimilar_incidents: submission.editor_dissimilar_incidents || [],
-                        editor_notes: "",
+                        editor_notes: submission.editor_notes ?? '',
                         flagged_dissimilar_incidents: [],
                     }
                     if (submission.embedding) {
