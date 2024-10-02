@@ -4,7 +4,7 @@ import { gql } from '@apollo/client';
 import { expect } from '@playwright/test';
 import config from '../config';
 import { init } from '../memory-mongo';
-import { DBIncident } from '../seeds/aiidprod/incidents';
+import { DBIncident } from '../../server/interfaces';
 
 test.describe('Cite pages', () => {
     const discoverUrl = '/apps/discover';
