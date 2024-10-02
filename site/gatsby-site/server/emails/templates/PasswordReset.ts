@@ -1,5 +1,4 @@
-exports = function () {
-  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+export default `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
     <html data-editor-version="2" class="sg-campaigns" xmlns="http://www.w3.org/1999/xhtml">
         <head>
           <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -145,10 +144,10 @@ exports = function () {
                                             <td role="modules-container" style="padding:0px 0px 0px 0px; color:#000000; text-align:left;" bgcolor="#FFFFFF" width="100%" align="left"><table class="module preheader preheader-hide" role="module" data-type="preheader" border="0" cellpadding="0" cellspacing="0" width="100%" style="display: none !important; mso-hide: all; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0;">
         <tr>
           <td role="module-content">
-            <p>Incident {{incidentId}}: "{{incidentTitle}}" was updated.</p>
+            <p></p>
           </td>
         </tr>
-      </table><table class="module" role="module" data-type="text" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="5301aec8-2187-4d96-97e4-ce266be29069" data-mc-module-version="2019-10-22">
+      </table><table class="module" role="module" data-type="text" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="9d151bab-9ce3-4b49-a74c-a6852c204ec6" data-mc-module-version="2019-10-22">
         <tbody>
           <tr>
             <td style="padding:18px 0px 18px 0px; line-height:35px; text-align:inherit; background-color:#061832;" height="100%" valign="top" bgcolor="#061832" role="module-content"><div><div style="font-family: inherit; text-align: center"><span style="color: #ffffff; font-size: 24px"><strong>AI INCIDENT DATABASE</strong></span></div><div></div></div></td>
@@ -157,15 +156,9 @@ exports = function () {
       </table><table class="module" role="module" data-type="text" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="902cdaf9-0c3e-40b3-b591-1fe6cf541db5" data-mc-module-version="2019-10-22">
         <tbody>
           <tr>
-            <td style="padding:18px 0px 18px 0px; line-height:22px; text-align:inherit;" height="100%" valign="top" bgcolor="" role="module-content"><div><div style="font-family: inherit; text-align: inherit">Greetings {{email}},</div>
-    <div style="font-family: inherit; text-align: inherit"><br>
-    <a href="{{incidentUrl}}">Incident {{incidentId}}</a>: "{{incidentTitle}}" was updated.</div>
+            <td style="padding:18px 0px 18px 0px; line-height:22px; text-align:inherit;" height="100%" valign="top" bgcolor="" role="module-content"><div><div style="font-family: inherit; text-align: inherit">Greetings,</div>
     <div style="font-family: inherit; text-align: inherit"><br></div>
-    <div style="font-family: inherit; text-align: inherit">New Report: <a href="{{reportUrl}}">{{reportTitle}}, {{reportAuthor}}</a><br>
-    </div>
-    <div style="font-family: inherit; text-align: inherit"><br></div>
-    <div style="font-family: inherit; text-align: inherit"><a href="{{incidentUrl}}">View Incident<br>
-    </a></div>
+    <div style="font-family: inherit; text-align: inherit">Click on this link to reset your password: <a href="https://incidentdatabase.ai/resetpassword?token={{token}}&amp;tokenId={{tokenId}}">Reset Password</a></div>
     <div style="font-family: inherit; text-align: inherit"><br></div>
     <div style="font-family: inherit; text-align: inherit">Sincerely,</div>
     <div style="font-family: inherit; text-align: inherit">Responsible AI Collaborative</div><div></div></div></td>
@@ -203,13 +196,6 @@ exports = function () {
             </td>
           </tr>
         </tbody>
-      </table><table class="module" role="module" data-type="text" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="79b1a951-2f75-4d6e-940b-6610516555e0" data-mc-module-version="2019-10-22">
-        <tbody>
-          <tr>
-            <td style="padding:5px 0px 18px 0px; line-height:22px; text-align:inherit;" height="100%" valign="top" bgcolor="" role="module-content"><div><div style="font-family: inherit; text-align: center"><a href="https://incidentdatabase.ai/unsubscribe?type=incident&amp;userId={{userId}}&amp;incidentId={{incidentId}}"><span style="font-size: 12px">Unsubscribe from Incident</span></a><span style="font-size: 12px"> &nbsp;&nbsp;</span></div>
-    <div style="font-family: inherit; text-align: center"><a href="https://incidentdatabase.ai/unsubscribe?type=all&amp;userId={{userId}}"><span style="font-size: 12px">Unsubscribe from All Notifications</span></a></div><div></div></div></td>
-          </tr>
-        </tbody>
       </table></td>
                                           </tr>
                                         </table>
@@ -232,4 +218,3 @@ exports = function () {
           </center>
         </body>
       </html>`;
-};
