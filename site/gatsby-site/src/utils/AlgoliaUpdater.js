@@ -13,8 +13,10 @@ const subset = !!process.env.ALGOLIA_SUBSET;
 const truncate = (doc) => {
   for (const [key, value] of Object.entries(doc)) {
     if (typeof value == 'string') {
-      if (value.length > 8000) {
-        doc[key] = value.substring(0, 8000);
+      const maxSize = subset ? 1000 : 8000;
+
+      if (value.length > maxSize) {
+        doc[key] = value.substring(0, maxSize);
       }
     }
   }
