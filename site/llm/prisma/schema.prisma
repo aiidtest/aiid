@@ -1,0 +1,134 @@
+// This is your Prisma schema file
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Incident {
+  id                                 Int                          @id @default(autoincrement())
+  date                               String
+  description                        String?
+  editor_notes                       String?
+  epoch_date_modified                Int?
+  incident_id                        Int                          @unique
+  title                              String
+  allegedDeployerOfAISystem          Entity[]                     @relation("DeployerIncidents")
+  allegedDeveloperOfAISystem         Entity[]                     @relation("DeveloperIncidents")
+  allegedHarmedOrNearlyHarmedParties Entity[]                     @relation("HarmedPartyIncidents")
+  editor_dissimilar_incidents        Int[]
+  editor_similar_incidents           Int[]
+  editors                            User[]                       @relation("IncidentEditors")
+  embedding                          IncidentEmbedding?
+  flagged_dissimilar_incidents       Int[]
+  nlp_similar_incidents              IncidentNlpSimilarIncident[]
+  reports                            Report[]
+  tsne                               IncidentTsne?
+  classifications                    Classification[]             @relation("IncidentClassifications")
+}
+
+model Report {
+  id                    Int              @id @default(autoincrement())
+  authors               String[]
+  cloudinary_id         String
+  date_downloaded       DateTime
+  date_modified         DateTime
+  date_published        DateTime
+  date_submitted        DateTime
+  description           String?
+  editor_notes          String?
+  embedding             Json? // ReportEmbedding as JSON
+  epoch_date_downloaded Int
+  epoch_date_modified   Int
+  epoch_date_published  Int
+  epoch_date_submitted  Int
+  flag                  Boolean?
+  image_url             String
+  inputs_outputs        String[]
+  is_incident_report    Boolean?
+  language              String
+  plain_text            String
+  report_number         Int              @unique
+  source_domain         String
+  submitters            String[]
+  tags                  String[]
+  text                  String
+  title                 String
+  url                   String
+  user                  User?            @relation("ReportUser", fields: [userId], references: [id])
+  userId                Int?
+  quiet                 Boolean?
+  incident              Incident?        @relation(fields: [incidentId], references: [id])
+  incidentId            Int?
+  classifications       Classification[] @relation("ReportClassifications")
+}
+
+model User {
+  id         Int        @id @default(autoincrement())
+  adminData  Json? // UserAdminDatum as JSON
+  first_name String?
+  last_name  String?
+  roles      String[]
+  userId     String     @unique
+  incidents  Incident[] @relation("IncidentEditors")
+  reports    Report[]   @relation("ReportUser")
+}
+
+model Entity {
+  id                   Int        @id @default(autoincrement())
+  entity_id            String     @unique
+  name                 String
+  created_at           DateTime?
+  date_modified        DateTime?
+  deployedIncidents    Incident[] @relation("DeployerIncidents")
+  developedIncidents   Incident[] @relation("DeveloperIncidents")
+  harmedPartyIncidents Incident[] @relation("HarmedPartyIncidents")
+}
+
+model Classification {
+  id         Int        @id @default(autoincrement())
+  attributes Json[] // Array of Attribute as JSON
+  incidents  Incident[] @relation("IncidentClassifications")
+  namespace  String
+  notes      String?
+  publish    Boolean?
+  reports    Report[]   @relation("ReportClassifications")
+}
+
+model Taxa {
+  id                Int      @id @default(autoincrement())
+  complete_entities Boolean?
+  description       String?
+  dummy_fields      Json[] // Array of DummyFields as JSON
+  field_list        Json[] // Array of FieldList as JSON
+  namespace         String?
+  weight            Int?
+}
+
+// Converting embedded types to JSON in PostgreSQL
+model IncidentEmbedding {
+  id           Int      @id @default(autoincrement())
+  incidentId   Int      @unique
+  incident     Incident @relation(fields: [incidentId], references: [id])
+  from_reports Int[]
+  vector       Float[]
+}
+
+model IncidentTsne {
+  id         Int      @id @default(autoincrement())
+  incidentId Int      @unique
+  incident   Incident @relation(fields: [incidentId], references: [id])
+  x          Float?
+  y          Float?
+}
+
+model IncidentNlpSimilarIncident {
+  id          Int      @id @default(autoincrement())
+  incidentId  Int
+  incident    Incident @relation(fields: [incidentId], references: [id])
+  incident_id Int?
+  similarity  Float?
+}
