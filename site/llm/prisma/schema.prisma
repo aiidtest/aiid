@@ -1,11 +1,12 @@
-// This is your Prisma schema file
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 model Incident {
@@ -22,12 +23,12 @@ model Incident {
   editor_dissimilar_incidents        Int[]
   editor_similar_incidents           Int[]
   editors                            User[]                       @relation("IncidentEditors")
-  embedding                          IncidentEmbedding?
   flagged_dissimilar_incidents       Int[]
   nlp_similar_incidents              IncidentNlpSimilarIncident[]
   reports                            Report[]
   tsne                               IncidentTsne?
   classifications                    Classification[]             @relation("IncidentClassifications")
+  text_chunks                        TextChunk[]                  @relation("IncidentChunks")
 }
 
 model Report {
@@ -40,7 +41,6 @@ model Report {
   date_submitted        DateTime
   description           String?
   editor_notes          String?
-  embedding             Json? // ReportEmbedding as JSON
   epoch_date_downloaded Int
   epoch_date_modified   Int
   epoch_date_published  Int
@@ -64,6 +64,34 @@ model Report {
   incident              Incident?        @relation(fields: [incidentId], references: [id])
   incidentId            Int?
   classifications       Classification[] @relation("ReportClassifications")
+  text_chunks           TextChunk[]      @relation("ReportChunks")
+}
+
+// New models for RAG
+model TextChunk {
+  id         Int                         @id @default(autoincrement())
+  text       String
+  embedding  Unsupported("vector(1536)") // Using OpenAI's embedding dimension
+  metadata   Json?
+  // Relations
+  incident   Incident?                   @relation("IncidentChunks", fields: [incidentId], references: [id])
+  incidentId Int?
+  report     Report?                     @relation("ReportChunks", fields: [reportId], references: [id])
+  reportId   Int?
+  created_at DateTime                    @default(now())
+  updated_at DateTime                    @updatedAt
+
+  @@index([embedding], type: Vector)
+}
+
+// Index configuration for vector search
+model VectorIndexConfig {
+  id         Int      @id @default(autoincrement())
+  index_name String   @unique
+  dimensions Int
+  metric     String // e.g., "cosine", "euclidean", "dot_product"
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 model User {
