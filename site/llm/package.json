@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.38.3",
+    "node-fetch": "^3.3.2",
+    "pg": "^8.13.1"
+  },
+  "scripts": {
+    "init": "npx drizzle-kit migrate",
+    "download": "npx tsx --env-file=.env download.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.4",
+    "drizzle-kit": "^0.30.1"
+  }
+}
