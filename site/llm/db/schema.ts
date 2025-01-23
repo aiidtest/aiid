@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, boolean, uniqueIndex, real, } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, timestamp, boolean, uniqueIndex, real, customType, vector, serial } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const entities = pgTable('entities', {
@@ -143,4 +143,46 @@ export const incidentRelations = relations(incidents, ({ many }) => ({
     developers: many(incidentDevelopers),
     harmedParties: many(incidentHarmedParties),
     implicatedSystems: many(implicatedSystems),
+}));
+
+
+
+// Embeddings
+
+export const reportEmbeddings = pgTable('reportEmbeddings', {
+    id: serial('id').primaryKey(),
+    reportNumber: integer('reportNumber').references(() => reports.reportNumber),
+    chunkIndex: integer('chunkIndex').notNull(),
+    chunkText: text('chunkText').notNull(),
+    embedding: vector('embedding', { dimensions: 1024 }),
+    createdAt: timestamp('createdAt').defaultNow().notNull(),
+    model: text('model').notNull(),
+}, (table) => ({
+    reportEmbeddingIdx: uniqueIndex('reportEmbeddingIdx').on(table.reportNumber, table.chunkIndex),
+}));
+
+export const incidentEmbeddings = pgTable('incidentEmbeddings', {
+    id: serial('id').primaryKey(),
+    incidentId: integer('incidentId').references(() => incidents.incidentId),
+    chunkIndex: integer('chunkIndex').notNull(),
+    chunkText: text('chunkText').notNull(),
+    embedding: vector('embedding', { dimensions: 1024 }),
+    createdAt: timestamp('createdAt').defaultNow().notNull(),
+    model: text('model').notNull(),
+}, (table) => ({
+    incidentEmbeddingIdx: uniqueIndex('incidentEmbeddingIdx').on(table.incidentId, table.chunkIndex),
+}));
+
+export const incidentEmbeddingRelations = relations(incidentEmbeddings, ({ one }) => ({
+    incident: one(incidents, {
+        fields: [incidentEmbeddings.incidentId],
+        references: [incidents.incidentId],
+    }),
+}));
+
+export const reportEmbeddingRelations = relations(reportEmbeddings, ({ one }) => ({
+    report: one(reports, {
+        fields: [reportEmbeddings.reportNumber],
+        references: [reports.reportNumber],
+    }),
 }));
