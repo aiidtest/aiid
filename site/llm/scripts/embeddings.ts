@@ -1,5 +1,5 @@
-import { db } from './db';
-import { reports, incidents, reportEmbeddings, incidentEmbeddings } from './db/schema';
+import { db } from '../db';
+import { reports, incidents, reportEmbeddings, incidentEmbeddings } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import readline from 'readline';
 import { hideBin } from 'yargs/helpers';

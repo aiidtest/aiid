@@ -3,14 +3,17 @@
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.38.3",
     "node-fetch": "^3.3.2",
-    "pg": "^8.13.1"
+    "pg": "^8.13.1",
+    "readline": "^1.3.0",
+    "yargs": "^17.7.2"
   },
   "scripts": {
     "init": "npx drizzle-kit migrate",
-    "download": "npx tsx --env-file=.env download.ts"
+    "download": "npx tsx --env-file=.env scripts/download.ts",
+    "embeddings": "npx tsx --env-file=.env scripts/embeddings.ts"
   },
   "devDependencies": {
-    "@types/node": "^22.10.4",
+    "@types/node": "^22.10.10",
     "drizzle-kit": "^0.30.1"
   }
 }

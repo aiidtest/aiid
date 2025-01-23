@@ -1,8 +1,8 @@
 import fetch from 'node-fetch';
-import * as schema from './db/schema';
+import * as schema from '../db/schema';
 import { eq, inArray, sql } from 'drizzle-orm';
-import { db, close } from './db';
-import QUERIES from './queries';
+import { db, close } from '../db';
+import QUERIES from '../queries';
 
 const BATCH_SIZE = 100;
 const API_URL = 'https://incidentdatabase.ai/api/graphql';
@@ -236,7 +236,6 @@ const COLLECTIONS: CollectionConfig[] = [
   },
 ]
 
-// Generic function to fetch and process items
 async function fetchAndProcessCollection<T>(config: CollectionConfig): Promise<void> {
   let hasMore = true;
   let skip = 0;
@@ -290,4 +289,6 @@ async function main() {
   }
 }
 
-main().catch(console.error);
+if (require.main === module) {
+  main()
+}
