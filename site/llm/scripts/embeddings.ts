@@ -33,6 +33,14 @@ function chunkText(text: string): string[] {
 }
 
 async function processReport(reportNumber: number, provider: EmbeddingProvider) {
+
+    console.log(`Processing report ${reportNumber}`);
+
+    if (await db.query.reportEmbeddings.findFirst({ where: eq(reportEmbeddings.reportNumber, reportNumber) })) {
+        console.log(`Report ${reportNumber} already processed`);
+        return;
+    }
+
     const report = await db.query.reports.findFirst({
         where: eq(reports.reportNumber, reportNumber),
     });
@@ -73,9 +81,19 @@ async function processReport(reportNumber: number, provider: EmbeddingProvider) 
             model: provider.getModel(),
         });
     }
+
+    console.log(`Processed report ${reportNumber}, ${chunks.length} chunks`);
 }
 
 async function processIncident(incidentId: number, provider: EmbeddingProvider) {
+
+    console.log(`Processing incident ${incidentId}`);
+
+    if (await db.query.incidentEmbeddings.findFirst({ where: eq(incidentEmbeddings.incidentId, incidentId) })) {
+        console.log(`Incident ${incidentId} already processed`);
+        return;
+    }
+
     const incident = await db.query.incidents.findFirst({
         where: eq(incidents.incidentId, incidentId),
     });
@@ -112,6 +130,8 @@ async function processIncident(incidentId: number, provider: EmbeddingProvider) 
             model: provider.getModel(),
         });
     }
+
+    console.log(`Processed incident ${incidentId}, ${chunks.length} chunks`);
 }
 
 async function confirm(message: string): Promise<boolean> {
@@ -130,7 +150,21 @@ async function confirm(message: string): Promise<boolean> {
 
 async function parseNumberList(input: string): Promise<number[]> {
     if (input.toLowerCase() === 'all') return [];
-    return input.split(',').map(num => parseInt(num.trim())).filter(num => !isNaN(num));
+
+    return input.split(',').flatMap(segment => {
+        segment = segment.trim();
+        const rangeMatch = segment.match(/^(\d+)\.\.(\d+)$/);
+
+        if (rangeMatch) {
+            const start = parseInt(rangeMatch[1]);
+            const end = parseInt(rangeMatch[2]);
+            if (isNaN(start) || isNaN(end)) return [];
+            return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+        }
+
+        const num = parseInt(segment);
+        return isNaN(num) ? [] : [num];
+    });
 }
 
 async function main() {
