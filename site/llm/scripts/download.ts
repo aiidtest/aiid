@@ -20,7 +20,6 @@ type CollectionConfig = {
   processItem: (item: any) => Promise<void>;
 };
 
-// Helper function to make GraphQL requests
 async function fetchGraphQL<T>(query: string, variables: any = {}): Promise<PaginatedResponse<T>> {
   const maxRetries = 3;
   const backoffMs = 1000;

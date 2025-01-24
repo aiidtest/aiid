@@ -4,49 +4,12 @@ import { eq } from 'drizzle-orm';
 import readline from 'readline';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs';
+import { EmbeddingProvider } from '../types';
+import { VoyageEmbeddings } from '../lib/VoyagerEmbeddings';
 
 const CHUNK_SIZE = 1000;
 const CHUNK_OVERLAP = 200;
 
-type EmbeddingResponse = {
-    embedding: number[];
-    model: string;
-};
-
-interface EmbeddingProvider {
-    getEmbedding(text: string): Promise<EmbeddingResponse>;
-    getModel(): string;
-}
-
-class VoyageEmbeddings implements EmbeddingProvider {
-    private model = "voyage-2";
-    private apiKey: string;
-
-    constructor(apiKey: string) {
-        this.apiKey = apiKey;
-    }
-
-    async getEmbedding(text: string): Promise<EmbeddingResponse> {
-        const response = await fetch('https://api.voyageai.com/v1/embeddings', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: this.model,
-                input: text
-            })
-        });
-
-        const data = await response.json();
-        return { embedding: data.data[0].embedding, model: this.model };
-    }
-
-    getModel(): string {
-        return this.model;
-    }
-}
 
 function chunkText(text: string): string[] {
     const words = text.split(' ');
