@@ -1,5 +1,4 @@
-import { test, conditionalIntercept, waitForRequest, query } from '../../utils';
-import { expect } from '@playwright/test';
+import { test, conditionalIntercept, waitForRequest, query, fillAutoComplete } from '../../utils';
 import { init } from '../../memory-mongo';
 
 test.describe('New Incident page', () => {
@@ -11,17 +10,15 @@ test.describe('New Incident page', () => {
 
   test('Should successfully create a new incident', async ({ page, login }) => {
 
-    test.slow();
-
-    const userId = await login(process.env.E2E_ADMIN_USERNAME, process.env.E2E_ADMIN_PASSWORD);
     await init({
       customData: {
         users: [
-          { userId, first_name: 'John', last_name: 'Doe', roles: ['admin'] },
+          { userId: 'mocked', first_name: 'Mock', last_name: 'User', roles: ['admin'] },
         ]
       }
-    }, { drop: false });
+    });
 
+    await login();
 
     await page.goto(url);
 
@@ -41,60 +38,29 @@ test.describe('New Incident page', () => {
     await page.keyboard.press('Enter');
     await page.locator('[data-cy="alleged-harmed-or-nearly-harmed-parties-input"] input').first().fill('children');
     await page.keyboard.press('Enter');
+    await page.locator('[data-cy="implicated-systems-input"] input').first().fill('children');
+    await page.keyboard.press('Enter');
 
-    await expect(async () => {
-      await page.locator('#input-editors').clear();
-      await page.waitForTimeout(1000);
-      await page.locator('#input-editors').pressSequentially('Joh', { delay: 500 });
-      await page.getByText('John Doe').click({ timeout: 1000 });
-    }).toPass();
-
-    await conditionalIntercept(page,
-      '**/graphql',
-      (req) => req.postDataJSON().operationName == 'logIncidentHistory',
-      { data: { logIncidentHistory: { incident_id: 4 } } },
-      'logIncidentHistory'
-    );
-
-    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await fillAutoComplete(page, '#input-editors', 'John', 'John Doe');
 
     await page.getByText('Save').click();
 
-    await waitForRequest('logIncidentHistory');
-
-    await page.getByText(`You have successfully create Incident ${4}. View incident`).waitFor();
+    await page.getByText(`You have successfully create Incident 5. View incident`).waitFor();
   });
 
   test('Should clone an incident', async ({ page, login }) => {
 
-    test.slow();
+    await init();
 
-    const userId = await login(process.env.E2E_ADMIN_USERNAME, process.env.E2E_ADMIN_PASSWORD);
-    await init({
-      customData: {
-        users: [
-          { userId, first_name: 'John', last_name: 'Doe', roles: ['admin'] },
-        ]
-      }
-    }, { drop: false });
+    await login();
 
-    const newIncidentId = 4;
+    const newIncidentId = 5;
 
     await page.goto(`${url}/?incident_id=3`);
-
-    await conditionalIntercept(
-      page,
-      '**/graphql',
-      (req) => req.postDataJSON().operationName == 'logIncidentHistory',
-      { data: { logIncidentHistory: { incident_id: newIncidentId } } },
-      'logIncidentHistory'
-    );
 
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
 
     await page.getByText('Save').click();
-
-    await waitForRequest('logIncidentHistory');
 
     await page.getByText(`You have successfully create Incident ${newIncidentId}. View incident`).waitFor();
   });

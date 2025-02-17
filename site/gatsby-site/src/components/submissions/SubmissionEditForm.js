@@ -19,7 +19,7 @@ import {
 import { debounce } from 'debounce';
 import { STATUS } from 'utils/submissions';
 import StepContainer from 'components/forms/SubmissionWizard/StepContainer';
-import { useUserContext } from 'contexts/userContext';
+import { useUserContext } from 'contexts/UserContext';
 import { UPSERT_SUBSCRIPTION } from '../../graphql/subscriptions';
 import { SUBSCRIPTION_TYPE } from 'utils/subscriptions';
 import isEmpty from 'lodash/isEmpty';
@@ -98,12 +98,12 @@ const SubmissionEditForm = ({ handleSubmit, saving, setSaving, userLoading, user
     if (user) {
       await subscribeToNewReportsMutation({
         variables: {
-          query: {
-            type: SUBSCRIPTION_TYPE.incident,
-            userId: { userId: user.id },
-            incident_id: { incident_id: incident_id },
+          filter: {
+            type: { EQ: SUBSCRIPTION_TYPE.incident },
+            userId: { EQ: user.id },
+            incident_id: { EQ: incident_id },
           },
-          subscription: {
+          update: {
             type: SUBSCRIPTION_TYPE.incident,
             userId: {
               link: user.id,

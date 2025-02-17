@@ -114,9 +114,6 @@ export const DELETE_REPORT = gql(`
   }
 `);
 
-// There is no built-in support for making easy array operations in Realm yet, so this is somewhat inefficient
-// https://feedback.mongodb.com/forums/923521-realm/suggestions/40765336-adding-or-removing-elements-from-array-fields
-
 export const LINK_REPORTS_TO_INCIDENTS = gql(`
   mutation LinkReportsToIncidents($input: LinkReportsToIncidentsInput!) {
     linkReportsToIncidents(input: $input) {
@@ -128,17 +125,9 @@ export const LINK_REPORTS_TO_INCIDENTS = gql(`
   }
 `);
 
-export const LOG_REPORT_HISTORY = gql(`
-  mutation logReportHistory($input: History_reportInsertInput!) {
-    logReportHistory(input: $input) {
-      report_number
-    }
-  }
-`);
-
 export const FIND_REPORT_HISTORY = gql(`
-  query FindReportHistory($query: History_reportQueryInput) {
-    history_reports(query: $query, sortBy: EPOCH_DATE_MODIFIED_DESC) {
+  query FindReportHistory($filter: History_reportFilterType) {
+    history_reports(filter: $filter, sort: { date_modified: DESC }) {
       _id
       authors
       cloudinary_id

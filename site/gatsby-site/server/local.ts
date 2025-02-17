@@ -34,10 +34,66 @@ import {
 } from './fields/incidents';
 
 import {
-    queryFields as submissionsQueryFields,
-    mutationFields as submissionsMutationFields,
-    permissions as submissionsPermissions
+  queryFields as submissionsQueryFields,
+  mutationFields as submissionsMutationFields,
+  permissions as submissionsPermissions
 } from './fields/submissions';
+
+import {
+  queryFields as entity_relationshipsQueryFields,
+  mutationFields as entity_relationshipsMutationFields,
+  permissions as entity_relationshipsPermissions
+} from './fields/entity_relationships';
+
+import {
+    queryFields as classificationsQueryFields,
+    mutationFields as classificationsMutationFields,
+    permissions as classificationsPermissions
+} from './fields/classifications';
+
+import {
+    queryFields as taxaQueryFields,
+    permissions as taxaPermissions
+} from './fields/taxa';
+
+import {
+    queryFields as candidatesQueryFields,
+    mutationFields as candidatesMutationFields,
+    permissions as candidatesPermissions
+} from './fields/candidates';
+
+import {
+    queryFields as subscriptionsQueryFields,
+    mutationFields as subscriptionsMutationFields,
+    permissions as subscriptionsPermissions
+} from './fields/subscriptions';
+
+import {
+    queryFields as duplicatesQueryFields,
+    mutationFields as duplicatesMutationFields,
+    permissions as duplicatesPermissions
+} from './fields/duplicates';
+
+import {
+    queryFields as notificationsQueryFields,
+    permissions as notificationsPermissions
+} from './fields/notifications';
+
+import {
+    queryFields as reportsHistoryQueryFields,
+    permissions as reportsHistoryPermissions
+} from './fields/reportsHistory';
+
+import {
+    queryFields as incidentsHistoryQueryFields,
+    permissions as incidentsHistoryPermissions,
+} from './fields/incidentsHistory';
+
+import {
+    queryFields as checklistsQueryFields,
+    mutationFields as checklistsMutationFields,
+    permissions as checklistsPermissions
+} from './fields/checklists';
 
 
 export const getSchema = () => {
@@ -55,6 +111,16 @@ export const getSchema = () => {
             ...entitiesQueryFields,
             ...usersQueryFields,
             ...submissionsQueryFields,
+            ...entity_relationshipsQueryFields,
+            ...classificationsQueryFields,
+            ...taxaQueryFields,
+            ...candidatesQueryFields,
+            ...subscriptionsQueryFields,
+            ...duplicatesQueryFields,
+            ...notificationsQueryFields,
+            ...reportsHistoryQueryFields,
+            ...incidentsHistoryQueryFields,
+            ...checklistsQueryFields,
         }
     });
 
@@ -67,6 +133,12 @@ export const getSchema = () => {
             ...entitiesMutationFields,
             ...usersMutationFields,
             ...submissionsMutationFields,
+            ...entity_relationshipsMutationFields,
+            ...classificationsMutationFields,
+            ...candidatesMutationFields,
+            ...subscriptionsMutationFields,
+            ...duplicatesMutationFields,
+            ...checklistsMutationFields,
         }
     });
 
@@ -77,7 +149,6 @@ export const getSchema = () => {
 
     /**
      * Configures permissions for the GraphQL API using graphql-shield.
-     * This configuration starts with all fields being private (denied access) and requires explicit permission settings for each field.
      * 
      * The `shield` function is used to define the permissions for queries and mutations, with default access set to deny (`deny`).
      * Permissions are then selectively granted using specific permissions configurations (e.g., `quickAddsPermissions`, `reportsPermissions`).
@@ -100,6 +171,16 @@ export const getSchema = () => {
                 ...entitiesPermissions.Query,
                 ...usersPermissions.Query,
                 ...submissionsPermissions.Query,
+                ...entity_relationshipsPermissions.Query,
+                ...classificationsPermissions.Query,
+                ...taxaPermissions.Query,
+                ...candidatesPermissions.Query,
+                ...subscriptionsPermissions.Query,
+                ...duplicatesPermissions.Query,
+                ...notificationsPermissions.Query,
+                ...reportsHistoryPermissions.Query,
+                ...incidentsHistoryPermissions.Query,
+                ...checklistsPermissions.Query,
             },
             Mutation: {
                 "*": deny,
@@ -109,6 +190,12 @@ export const getSchema = () => {
                 ...entitiesPermissions.Mutation,
                 ...usersPermissions.Mutation,
                 ...submissionsPermissions.Mutation,
+                ...entity_relationshipsPermissions.Mutation,
+                ...classificationsPermissions.Mutation,
+                ...candidatesPermissions.Mutation,
+                ...subscriptionsPermissions.Mutation,
+                ...duplicatesPermissions.Mutation,
+                ...checklistsPermissions.Mutation
             },
         },
         {

@@ -1,7 +1,7 @@
 import EntityCard from 'components/entities/EntityCard';
 import IncidentCard from 'components/incidents/IncidentCard';
 import Link from 'components/ui/Link';
-import { useUserContext } from 'contexts/userContext';
+import { useUserContext } from 'contexts/UserContext';
 import { Button, Spinner } from 'flowbite-react';
 import { graphql } from 'gatsby';
 import useToastContext, { SEVERITY } from '../hooks/useToast';
@@ -20,6 +20,7 @@ import {
 } from '../graphql/subscriptions';
 import { SUBSCRIPTION_TYPE } from 'utils/subscriptions';
 import { LocalizedLink } from 'plugins/gatsby-theme-i18n';
+import Label from '../components/forms/Label';
 
 const sortByReports = (a, b) => b.reports.length - a.reports.length;
 
@@ -28,10 +29,11 @@ const incidentFields = [
   'incidentsAsDeployer',
   'incidentsAsDeveloper',
   'incidentsHarmedBy',
+  'incidentsImplicatedSystems',
 ];
 
 const EntityPage = ({ pageContext, data, ...props }) => {
-  const { id, name, relatedEntities } = pageContext;
+  const { id, name, relatedEntities, entityRelationships } = pageContext;
 
   const { isRole, user } = useUserContext();
 
@@ -46,6 +48,7 @@ const EntityPage = ({ pageContext, data, ...props }) => {
     incidentsAsDeveloper,
     incidentsAsBoth,
     incidentsHarmedBy,
+    incidentsImplicatedSystems,
     entities: entitiesData,
     responses,
   } = data;
@@ -55,6 +58,7 @@ const EntityPage = ({ pageContext, data, ...props }) => {
     incidentsHarmedBy: incidentsHarmedBy.nodes.sort(sortByReports),
     incidentsAsDeveloper: incidentsAsDeveloper.nodes.sort(sortByReports),
     incidentsAsDeployer: incidentsAsDeployer.nodes.sort(sortByReports),
+    incidentsImplicatedSystems: incidentsImplicatedSystems.nodes.sort(sortByReports),
   };
 
   const sections = [
@@ -73,6 +77,10 @@ const EntityPage = ({ pageContext, data, ...props }) => {
     {
       header: 'Incidents involved as Deployer',
       key: 'incidentsAsDeployer',
+    },
+    {
+      header: 'Incidents implicated systems',
+      key: 'incidentsImplicatedSystems',
     },
   ];
 
@@ -100,6 +108,16 @@ const EntityPage = ({ pageContext, data, ...props }) => {
     return entity;
   });
 
+  const entityRelationshipsData = entityRelationships
+    .filter((rel) => rel.sub === id || rel.obj === id)
+    .map((rel) => {
+      const relatedId = rel.sub === id ? rel.obj : rel.sub;
+
+      const entity = entitiesData?.nodes?.find((entity) => entity.entity_id === relatedId);
+
+      return { ...entity, id: relatedId };
+    });
+
   const [subscribeToEntityMutation, { loading: subscribing }] = useMutation(UPSERT_SUBSCRIPTION);
 
   const [unsubscribeToEntityMutation, { loading: unsubscribing }] =
@@ -112,10 +130,10 @@ const EntityPage = ({ pageContext, data, ...props }) => {
     networkStatus: subscriptionNetworkStatus,
   } = useQuery(FIND_USER_SUBSCRIPTIONS, {
     variables: {
-      query: {
-        type: SUBSCRIPTION_TYPE.entity,
-        userId: { userId: user?.id },
-        entityId: { entity_id: id },
+      filter: {
+        type: { EQ: SUBSCRIPTION_TYPE.entity },
+        userId: { EQ: user?.id },
+        entityId: { EQ: id },
       },
     },
     notifyOnNetworkStatusChange: true,
@@ -126,12 +144,12 @@ const EntityPage = ({ pageContext, data, ...props }) => {
       try {
         await subscribeToEntityMutation({
           variables: {
-            query: {
-              type: SUBSCRIPTION_TYPE.entity,
-              userId: { userId: user.id },
-              entityId: { entity_id: id },
+            filter: {
+              type: { EQ: SUBSCRIPTION_TYPE.entity },
+              userId: { EQ: user.id },
+              entityId: { EQ: id },
             },
-            subscription: {
+            update: {
               type: SUBSCRIPTION_TYPE.entity,
               userId: { link: user.id },
               entityId: { link: id },
@@ -179,10 +197,10 @@ const EntityPage = ({ pageContext, data, ...props }) => {
     try {
       await unsubscribeToEntityMutation({
         variables: {
-          query: {
-            type: SUBSCRIPTION_TYPE.entity,
-            userId: { userId: user.id },
-            entityId: { entity_id: id },
+          filter: {
+            type: { EQ: SUBSCRIPTION_TYPE.entity },
+            userId: { EQ: user.id },
+            entityId: { EQ: id },
           },
         },
       });
@@ -293,11 +311,28 @@ const EntityPage = ({ pageContext, data, ...props }) => {
       {relatedEntitiesData.length > 0 && (
         <>
           <h2 className="mt-24">
-            <Trans ns="entities">Related Entities</Trans>
+            <Label popover="relatedEntities" label={t('Related Entities')} className="text-2xl" />
           </h2>
           <div className="grid gap-4 grid-flow-row-dense md:grid-cols-2 mt-6">
             {relatedEntitiesData.map((entity) => (
               <EntityCard key={entity.id} entity={entity} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {entityRelationshipsData && entityRelationshipsData?.length > 0 && (
+        <>
+          <h2 className="mt-24">
+            <Label
+              popover="entityRelationships"
+              label={t('Entity Relationships')}
+              className="text-2xl"
+            />
+          </h2>
+          <div className="grid gap-4 grid-flow-row-dense md:grid-cols-2 mt-6">
+            {entityRelationshipsData.map((entity) => (
+              <EntityCard key={entity.entity_id} entity={entity} />
             ))}
           </div>
         </>
@@ -387,6 +422,7 @@ export const query = graphql`
     $incidentsAsDeveloper: [Int]
     $incidentsAsBoth: [Int]
     $incidentsHarmedBy: [Int]
+    $incidentsImplicatedSystems: [Int]
   ) {
     incidentsAsDeployer: allMongodbAiidprodIncidents(
       filter: { incident_id: { in: $incidentsAsDeployer } }
@@ -402,6 +438,7 @@ export const query = graphql`
         Alleged_deployer_of_AI_system
         Alleged_developer_of_AI_system
         Alleged_harmed_or_nearly_harmed_parties
+        implicated_systems
       }
     }
 
@@ -419,6 +456,7 @@ export const query = graphql`
         Alleged_deployer_of_AI_system
         Alleged_developer_of_AI_system
         Alleged_harmed_or_nearly_harmed_parties
+        implicated_systems
       }
     }
 
@@ -436,6 +474,7 @@ export const query = graphql`
         Alleged_deployer_of_AI_system
         Alleged_developer_of_AI_system
         Alleged_harmed_or_nearly_harmed_parties
+        implicated_systems
       }
     }
 
@@ -453,6 +492,25 @@ export const query = graphql`
         Alleged_deployer_of_AI_system
         Alleged_developer_of_AI_system
         Alleged_harmed_or_nearly_harmed_parties
+        implicated_systems
+      }
+    }
+
+    incidentsImplicatedSystems: allMongodbAiidprodIncidents(
+      filter: { incident_id: { in: $incidentsImplicatedSystems } }
+    ) {
+      nodes {
+        title
+        description
+        incident_id
+        reports {
+          report_number
+        }
+        date
+        Alleged_deployer_of_AI_system
+        Alleged_developer_of_AI_system
+        Alleged_harmed_or_nearly_harmed_parties
+        implicated_systems
       }
     }
 

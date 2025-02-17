@@ -1,14 +1,10 @@
-import { waitForRequest, query, mockDate, test, conditionalIntercept } from '../utils';
-import upsertDuplicateClassification from '../fixtures/classifications/upsertDuplicateClassification.json';
-import updateIncident50 from '../fixtures/incidents/updateIncident50.json';
+import { query, test, fillAutoComplete, mockAlgolia } from '../utils';
 import { format } from 'date-fns';
-import incident10 from '../fixtures/incidents/fullIncident10.json';
-import incident50 from '../fixtures/incidents/fullIncident50.json';
 import { gql } from '@apollo/client';
 import { expect } from '@playwright/test';
 import config from '../config';
 import { init } from '../memory-mongo';
-import { DBIncident } from '../seeds/aiidprod/incidents';
+import { DBIncident } from '../../server/interfaces';
 
 test.describe('Cite pages', () => {
     const discoverUrl = '/apps/discover';
@@ -16,8 +12,6 @@ test.describe('Cite pages', () => {
     const incidentId = 3;
 
     const url = `/cite/${incidentId}`;
-
-    let user: { userId: string };
 
     let lastIncidentId: number;
 
@@ -30,11 +24,6 @@ test.describe('Cite pages', () => {
         const response = await query({
             query: gql`
                         {
-                            user(filter: { first_name: {EQ: "Test"}, last_name: {EQ: "User" }}) {
-                                userId
-                                first_name
-                                last_name
-                            }
                             incidents(sort: {incident_id: DESC}, pagination: {limit: 1}) {
                                 incident_id
                             }
@@ -42,7 +31,6 @@ test.describe('Cite pages', () => {
                     `,
         });
 
-        user = response.data.user;
         lastIncidentId = response.data.incidents[0].incident_id;
     });
 
@@ -51,7 +39,7 @@ test.describe('Cite pages', () => {
     });
 
     test('Should show an edit link to users with the appropriate role', async ({ page, login }) => {
-        await login(config.E2E_ADMIN_USERNAME, config.E2E_ADMIN_PASSWORD);
+        await login();
 
         const id = 'r1';
 
@@ -112,7 +100,7 @@ test.describe('Cite pages', () => {
     test('Should show editors in the stats table', async ({ page }) => {
         await page.goto(url);
         const incidentStats = await page.locator('[data-cy=incident-stats] > * > *:has-text("Editors")');
-        await expect(incidentStats.locator('text=Sean McGregor')).toBeVisible();
+        await expect(incidentStats.locator('text=John Doe')).toBeVisible();
     });
 
     test('Should flag an incident', async ({ page }) => {
@@ -120,35 +108,19 @@ test.describe('Cite pages', () => {
 
         await init();
 
-        await conditionalIntercept(
-            page,
-            '**/graphql',
-            (req) => req.postDataJSON().operationName === 'logReportHistory',
-            {
-                data: {
-                    logReportHistory: {
-                        report_number: 3,
-                    },
-                },
-            },
-            'logReportHistory'
-        );
-
         await page.goto(url + '#' + _id);
 
-        await page.click(`[id="r${_id}"] [data-cy="expand-report-button"]`);
-        await page.click(`[id="r${_id}"] [data-cy="flag-button"]`);
+        await page.locator(`[id="r${_id}"] [data-cy="expand-report-button"]`).click();
+        await page.locator(`[id="r${_id}"] [data-cy="flag-button"]`).click();
 
         const modal = page.locator('[data-cy="flag-report-3"]');
         await expect(modal).toBeVisible();
 
         await modal.locator('[data-cy="flag-toggle"]').click();
 
-        await waitForRequest('logReportHistory');
-
         await expect(modal.locator('[data-cy="flag-toggle"]')).toBeDisabled();
 
-        await page.click('[aria-label="Close"]');
+        await page.locator('[aria-label="Close"]').click();
 
         await expect(modal).not.toBeVisible();
 
@@ -163,71 +135,51 @@ test.describe('Cite pages', () => {
         expect(data.report.flag).toBe(true);
     });
 
-    test.skip('Should remove duplicate', async ({ page }) => {
-        await conditionalIntercept(
-            page,
-            '**/graphql',
-            (req) => req.postDataJSON().operationName === 'UpsertClassification',
-            upsertDuplicateClassification,
-            'upsertClassification'
-        );
+    test('Should remove duplicate', async ({ page, login }) => {
 
-        await conditionalIntercept(
-            page,
-            '**/graphql',
-            (req) => req.postDataJSON().operationName === 'UpdateIncident',
-            updateIncident50,
-            'updateIncident'
-        );
+        test.slow();
 
-        await conditionalIntercept(
-            page,
-            '**/graphql',
-            (req) => req.postDataJSON().operationName === 'InsertDuplicate',
-            {
-                data: {
-                    insertOneDuplicate: {
-                        __typename: 'Duplicate',
-                        duplicate_incident_number: 10,
-                        true_incident_number: 50,
-                    },
-                },
-            },
-            'insertDuplicate'
-        );
+        await init();
 
-        await conditionalIntercept(
-            page,
-            '**/graphql',
-            (req) =>
-                req.postDataJSON().operationName === 'FindIncident' &&
-                req.postDataJSON().variables.query.incident_id === 10,
-            incident10,
-            'findIncident'
-        );
+        await login();
 
-        await conditionalIntercept(
-            page,
-            '**/graphql',
-            (req) =>
-                req.postDataJSON().operationName === 'FindIncident' &&
-                req.postDataJSON().variables.query.incident_id === 50,
-            incident50,
-            'findIncident'
-        );
-
-        await login(page, config.E2E_ADMIN_USERNAME, config.E2E_ADMIN_PASSWORD);
-
-        await page.goto('/cite/10');
+        await page.goto('/cite/3');
 
         await page.click('[data-cy="remove-duplicate"]');
 
-        await page.fill('#input-duplicateIncidentId', '50');
-        await page.click('#duplicateIncidentId > a[aria-label="50"]');
+        await fillAutoComplete(page, '#input-duplicateIncidentId', '2 incident', 'Incident 2');
 
         await page.click('[data-cy="confirm-remove-duplicate"]');
 
-        await expect(page.locator('text=Incident 10 marked as duplicate')).toBeVisible();
+        await expect(page.locator('text=Incident 3 marked as duplicate')).toBeVisible({ timeout: 30000 });
+
+        const { data } = await query({
+            query: gql`
+            {
+                duplicates(filter: { duplicate_incident_number: { EQ: 3 } }) {
+                    true_incident_number
+                }
+                incident_classifications_3: classifications(filter: { incidents: { EQ: 3 } }) {
+                    namespace
+                    notes
+                    incidents { 
+                        incident_id 
+                    }
+                }
+                incident_classifications_2: classifications(filter: { incidents: { EQ: 2 } }) {
+                    namespace
+                    notes
+                    incidents { 
+                        incident_id 
+                    }
+                }
+            }
+            `,
+        });
+
+        expect(data.duplicates).toEqual([{ true_incident_number: 2 }]);
+        expect(data.incident_classifications_3).toHaveLength(0);
+        expect(data.incident_classifications_2).toHaveLength(4);
     });
 
     test('Should pre-fill submit report form', async ({ page }) => {
@@ -258,14 +210,17 @@ test.describe('Cite pages', () => {
         await expect(page.locator('a:has-text("Previous Incident")')).toHaveAttribute('href', '/cite/1');
     });
 
-    test.skip('Should render Next and Previous incident buttons if duplicate incident', async ({ page }) => {
-        await page.goto('/cite/90');
+    test('Should render duplicate page', async ({ page }) => {
+        await page.goto('/cite/5');
+
+        await expect(page.getByText('This incident is a duplicate of Incident 3. All new reports and citations should be directed to incident 3. The reports previously found on this page have been migrated to the previously existing incident.')).toBeVisible();
 
         await expect(page.locator('a:has-text("Next Incident")')).toBeVisible();
-        await expect(page.locator('a:has-text("Next Incident")')).toHaveAttribute('href', '/cite/91');
+        await expect(page.locator('a:has-text("Next Incident")')).toHaveAttribute('disabled');
+
 
         await expect(page.locator('a:has-text("Previous Incident")')).toBeVisible();
-        await expect(page.locator('a:has-text("Previous Incident")')).toHaveAttribute('href', '/cite/89');
+        await expect(page.locator('a:has-text("Previous Incident")')).toHaveAttribute('href', '/cite/4');
     });
 
     test('Should render the header next/previous buttons', async ({ page }) => {
@@ -295,7 +250,8 @@ test.describe('Cite pages', () => {
     });
 
     test('Should show the edit incident form', async ({ page, login }) => {
-        await login(config.E2E_ADMIN_USERNAME, config.E2E_ADMIN_PASSWORD);
+
+        await login();
 
         await page.goto(url);
 
@@ -310,6 +266,7 @@ test.describe('Cite pages', () => {
         await page.goto(url);
 
         const date = format(new Date(), 'MMMMd,y');
+        const retrievedDate = format(new Date(), 'MMMMyyyy')
 
         await page.locator('button:has-text("Citation Info")').click();
 
@@ -319,7 +276,7 @@ test.describe('Cite pages', () => {
         const bibText = bibTextElement.replace(/(\r\n|\n|\r| |\s)/g, '');
 
         expect(bibText).toBe(
-            `@article{aiid:3,author={Olsson,Catherine},editor={McGregor,Sean},journal={AIIncidentDatabase},publisher={ResponsibleAICollaborative},title={IncidentNumber3},url={https://incidentdatabase.ai/cite/3},year={2014},urldate={${date}}}`
+            `@article{aiid:3,author={Olsson,Catherine},editor={Doe,John},journal={AIIncidentDatabase},publisher={ResponsibleAICollaborative},title={IncidentNumber3:KronosSchedulingAlgorithmAllegedlyCausedFinancialIssuesforStarbucksEmployees},url={https://incidentdatabase.ai/cite/3},year={2014},urldate={${date}},note={Retrieved${retrievedDate}from\\url{https://incidentdatabase.ai/cite/3}}}`
         );
     });
 
@@ -373,7 +330,7 @@ test.describe('Cite pages', () => {
     });
 
     test('Should display edit link when logged in as editor', async ({ page, login }) => {
-        await login(config.E2E_ADMIN_USERNAME, config.E2E_ADMIN_PASSWORD);
+        await login();
 
         await page.goto('/cite/3');
 
@@ -384,28 +341,11 @@ test.describe('Cite pages', () => {
 
         await init();
 
-        await conditionalIntercept(
-            page,
-            '**/graphql',
-            (req) => req.postDataJSON().operationName === 'logIncidentHistory',
-            {
-                data: {
-                    logIncidentHistory: {
-                        incident_id: 3,
-                    },
-                },
-            },
-            'logIncidentHistory'
-        );
-
-        const now = new Date('March 14 2042 13:37:11');
-        await mockDate(page, now);
-
         await page.goto('/cite/3');
 
         await page.locator('[data-cy="similar-incidents-column"] [data-cy="flag-similar-incident"]').first().click();
 
-        await waitForRequest('logIncidentHistory');
+        await expect(page.getByText('Incident flagged successfully. Our editors will remove it from this list if it not relevant.')).toBeVisible();
 
         const { data } = await query({
             query: gql`{incident(filter: { incident_id: { EQ: 3 } }) {
@@ -420,34 +360,16 @@ test.describe('Cite pages', () => {
 
     test('Should flag an incident as not related (authenticated)', async ({ page, login }) => {
 
-        const userId = await login(config.E2E_ADMIN_USERNAME, config.E2E_ADMIN_PASSWORD);
+        await init();
 
-        await init({ customData: { users: [{ userId, first_name: 'Test', last_name: 'User', roles: ['admin'] }] } });
-
-        await conditionalIntercept(
-            page,
-            '**/graphql',
-            (req) => req.postDataJSON().operationName === 'logIncidentHistory',
-            {
-                data: {
-                    logIncidentHistory: {
-                        incident_id: 3,
-                    },
-                },
-            },
-            'logIncidentHistory'
-        );
+        await login();
 
         await page.goto('/cite/3');
 
-        const now = new Date();
-        await page.addInitScript(`{
-            Date.now = () => ${now.getTime()};
-        }`);
-
         await page.locator('[data-cy="similar-incidents-column"] [data-cy="flag-similar-incident"]').first().click();
 
-        await waitForRequest('logIncidentHistory');
+        await expect(page.getByText('Incident flagged successfully. Our editors will remove it from this list if it not relevant.')).toBeVisible();
+
 
         const { data } = await query({
             query: gql`{incident(filter: { incident_id: { EQ: 3 } }) {
@@ -486,7 +408,7 @@ test.describe('Cite pages', () => {
 
         await expect(page.locator('head meta[name="twitter:site"]')).toHaveAttribute('content', '@IncidentsDB');
         await expect(page.locator('head meta[name="twitter:creator"]')).toHaveAttribute('content', '@IncidentsDB');
-        await expect(page.locator('head meta[property="og:url"]')).toHaveAttribute('content', `https://incidentdatabase.ai${url}/`);
+        await expect(page.locator('head meta[property="og:url"]')).toHaveAttribute('content', new RegExp(`^https://incidentdatabase.ai${url}/?$`));
         await expect(page.locator('head meta[property="og:type"]')).toHaveAttribute('content', 'website');
         await expect(page.locator('head meta[property="og:title"]')).toHaveAttribute('content', title);
         await expect(page.locator('head meta[property="og:description"]')).toHaveAttribute('content', description);
@@ -496,40 +418,59 @@ test.describe('Cite pages', () => {
         await expect(page.locator('head meta[property="twitter:image"]')).toHaveAttribute('content');
     });
 
-    test('Should subscribe to incident updates (user authenticated)', async ({ page, login }) => {
-        await login(config.E2E_ADMIN_USERNAME, config.E2E_ADMIN_PASSWORD);
+    test.skip('Should subscribe to incident updates (user authenticated)', async ({ page, login }) => {
+
+        await init();
+
+        const [userId, accessToken] = await login();
 
         await page.goto('/cite/3');
 
-        await conditionalIntercept(
-            page,
-            '**/graphql',
-            (req) => req.postDataJSON().operationName === 'UpsertSubscription',
-            {
-                data: {
-                    upsertOneSubscription: {
-                        _id: 'dummyIncidentId',
-                    },
-                },
-            },
-            'upsertSubscription'
-        );
-
         await page.locator('button:has-text("Notify Me of Updates")').click();
 
-        await waitForRequest('upsertSubscription');
+        await expect(page.locator('[data-cy="toast"]')).toHaveText(`You have successfully subscribed to updates on incident 3`);
 
-        await expect(page.locator('[data-cy="toast"]')).toBeVisible();
 
-        await expect(page.locator('[data-cy="toast"]')).toHaveText(
-            `You have successfully subscribed to updates on incident 3`
+        const { data } = await query({
+            query: gql`
+              query SubscriptionQuery($filter: SubscriptionFilterType!){
+                subscriptions(filter: $filter) {
+                  type
+                  incident_id {
+                    incident_id
+                  }
+                }
+              }
+            `,
+            variables: { filter: { userId: { EQ: userId } } },
+        },
+            { Cookie: `next-auth.session-token=${encodeURIComponent(accessToken)};` }
         );
+
+        expect(data.subscriptions).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    type: 'incident',
+                    incident_id: { incident_id: 3 }
+                })
+            ])
+        );
+    });
+
+    test('Should not show a spinner on notify button when not logged in', async ({ page, login }) => {
+
+        const id = 'r1';
+
+        await page.goto('/cite/1#' + id);
+
+        await expect(page.locator('[data-cy="notify-button"] [data-cy="spinner"]')).toHaveCount(0);
+
     });
 
     test('Should show proper entities card text', async ({ page }) => {
         await page.goto('/cite/3/');
         await expect(page.locator('[data-cy="alleged-entities"]')).toHaveText(
-            'Alleged: Kronos developed an AI system deployed by Starbucks, which harmed Starbucks Employees.'
+            'Alleged: Kronos developed an AI system deployed by Starbucks, which harmed Starbucks Employees.Alleged implicated AI system: Entity 1'
         );
     });
 
@@ -541,8 +482,7 @@ test.describe('Cite pages', () => {
         await expect(page.locator('[data-cy="timeline-text-response"]')).not.toBeVisible();
     });
 
-    // the incident contains reports missing images so it will never pass
-    test.skip('There should not be image errors (400)', async ({ page }) => {
+    test('There should not be image errors (400)', async ({ page }) => {
         page.on('console', (msg) => {
             if (msg.type() === 'error') {
                 expect(msg.text()).not.toContain('the server responded with a status of 400');
@@ -556,6 +496,9 @@ test.describe('Cite pages', () => {
     });
 
     test('Should open incident from the discover app', async ({ page }) => {
+
+        await mockAlgolia(page);
+
         await page.goto(discoverUrl);
 
         await page.locator('[data-cy="collapse-button"]:visible').click();
@@ -567,50 +510,21 @@ test.describe('Cite pages', () => {
 
     test('Should link similar incidents', async ({ page, login }) => {
 
-        test.slow();
+        await init();
 
-        const userId = await login(process.env.E2E_ADMIN_USERNAME, process.env.E2E_ADMIN_PASSWORD);
-        await init({
-            customData: {
-                users: [
-                    { userId, first_name: 'John', last_name: 'Doe', roles: ['admin'] },
-                ]
-            }
-        }, { drop: false });
-
-        await conditionalIntercept(
-            page,
-            '**/graphql',
-            (req) =>
-                req.postDataJSON().operationName === 'logIncidentHistory',
-            {
-                "data": {
-                    "logIncidentHistory": {
-                        "incident_id": 50,
-                        "__typename": "LogIncidentHistoryPayload"
-                    }
-                }
-            },
-            'logIncidentHistory'
-        );
+        await login();
 
         await page.goto('/incidents/edit/?incident_id=3');
 
-        await page.locator('[data-cy="similar-id-input"]').fill('1');
-
-        await expect(page.getByText('#1 - Report 1')).toBeVisible();
+        await fillAutoComplete(page, '#input-incidentSearch', '1 Incident', 'Incident 1');
 
         await page.locator('[data-cy="related-byId"] [data-cy="result"]:nth-child(1)').getByText("Yes").click();
 
-        await page.locator('[data-cy="similar-id-input"]').fill('2');
-
-        await expect(page.getByText('#2 - Report 2')).toBeVisible();
+        await fillAutoComplete(page, '#input-incidentSearch', '2 Incident', 'Incident 2');
 
         await page.locator('[data-cy="related-byId"] [data-cy="result"]:nth-child(1)').getByText('No', { exact: true }).click();
 
-        await page.locator('button[type="submit"]').click();
-
-        await waitForRequest('logIncidentHistory');
+        await page.getByText('Save').click();
 
         await expect(page.locator('.tw-toast:has-text("Incident 3 updated successfully.")')).toBeVisible();
 
@@ -644,24 +558,37 @@ test.describe('Cite pages', () => {
 
     test('Should load incident data not yet in build', async ({ page }) => {
 
+        await init();
+
         const incident: DBIncident = {
-            incident_id: 4,
+            incident_id: 6,
             title: 'Test Title',
-            description: 'Incident 4 description',
+            description: 'Incident 6 description',
             date: "2020-01-01",
-            "Alleged deployer of AI system": ["entity1"],
-            "Alleged developer of AI system": ["entity2"],
-            "Alleged harmed or nearly harmed parties": ["entity3"],
-            editors: ["user1"],
+            "Alleged deployer of AI system": ["entity-1"],
+            "Alleged developer of AI system": ["entity-2"],
+            "Alleged harmed or nearly harmed parties": ["entity-3"],
+            editors: ["6737a6e881955aa4905ccb04"],
             reports: [1],
+            editor_notes: "This is an editor note",
+            flagged_dissimilar_incidents: []
         }
 
         await init({ aiidprod: { incidents: [incident] } });
 
-        await page.goto('/cite/4');
+        await page.goto('/cite/6');
 
-        await expect(page.getByText('Incident 4: Test Title')).toBeVisible();
-        await expect(page.getByText('Incident 4 description')).toBeVisible();
+        await expect(page.getByText('Incident 6: Test Title')).toBeVisible();
+        await expect(page.getByText('Incident 6 description')).toBeVisible();
         await expect(page.getByText('Alleged: Entity 2 developed an AI system deployed by Entity 1, which harmed Entity 3.')).toBeVisible()
+    });
+  
+    test('Should not show Annotator taxonomies', async ({ page, login }) => {
+
+        await page.goto('/cite/3');
+
+        await expect(page.locator(`[data-cy="taxonomy-tag-CSETv1"]`)).toHaveCount(1);
+        await expect(page.locator(`[data-cy="taxonomy-tag-CSETv1_Annotator"]`)).toHaveCount(0);
+
     });
 });

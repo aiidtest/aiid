@@ -8,7 +8,7 @@ import Link from '../../components/ui/Link';
 import { faExpandAlt } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useModal, CustomModal } from '../../hooks/useModal';
-import { useUserContext } from '../../contexts/userContext';
+import { useUserContext } from 'contexts/UserContext';
 import ListSkeleton from 'elements/Skeletons/List';
 import { Modal } from 'flowbite-react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -188,10 +188,10 @@ export default function ClassificationsDbView(props) {
     setupTaxonomiesSelect();
   }, [isAdmin]);
 
-  const fetchClassificationData = async (query) => {
+  const fetchClassificationData = async (filter) => {
     const classificationsData = await client.query({
       query: FIND_CLASSIFICATION,
-      variables: { query },
+      variables: { filter },
     });
 
     // For now we convert the list of attributes into a classifications object
@@ -439,7 +439,7 @@ export default function ClassificationsDbView(props) {
     ]);
 
     let rowQuery = {
-      namespace: currentTaxonomy,
+      namespace: { EQ: currentTaxonomy },
     };
 
     const classificationData = await fetchClassificationData(rowQuery);

@@ -48,6 +48,7 @@ const typeDefs = `
         Alleged_developer_of_AI_system: [String]
         Alleged_harmed_or_nearly_harmed_parties: [String]
         tsne: mongodbAiidprodIncidentsTsne
+        implicated_systems: [String]
     }
     
     type mongodbAiidprodSubmissions implements Node {
@@ -205,6 +206,14 @@ const typeDefs = `
     type mongodbAiidprodDuplicates implements Node {
         duplicate_incident_number: Int
         true_incident_number: Int
+    }
+
+    type mongodbAiidprodEntityRelationships implements Node {
+        is_symmetric: Boolean
+        sub: [String]
+        obj: [String]
+        created_at: Date
+        pred: String
     }
 `;
 

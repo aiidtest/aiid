@@ -7,7 +7,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import useLocalizePath from 'components/i18n/useLocalizePath';
 import { faChevronLeft } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { useUserContext } from 'contexts/userContext';
+import { useUserContext } from 'contexts/UserContext';
 import { useMenuContext } from 'contexts/MenuContext';
 import { graphql, useStaticQuery } from 'gatsby';
 
@@ -43,6 +43,23 @@ const Sidebar = ({ defaultCollapsed = false, location = null, setNavCollapsed })
                                 url
                               }
                               path
+                              items {
+                                item {
+                                  document {
+                                    ... on PrismicSidebarItem {
+                                      id
+                                      data {
+                                        title
+                                        label
+                                        url {
+                                          url
+                                        }
+                                        path
+                                      }
+                                    }
+                                  }
+                                }
+                              }
                             }
                           }
                         }
@@ -58,45 +75,65 @@ const Sidebar = ({ defaultCollapsed = false, location = null, setNavCollapsed })
     }
   `);
 
-  let sidebarItems = [];
+  const processItem = (item) => {
+    const { data } = item.item.document;
 
-  if (sidebar.data.items.length > 0) {
-    sidebarItems = sidebar.data.items.map((item) => {
-      item = item.item.document.data;
-      const itemItems = item.items.map((item) => {
-        item = item.item.document.data;
-        return {
-          url: item.item_url.url || item.item_path || '/',
-          title: item.item_title,
-          label: item.item_label,
-          items: [],
-        };
-      });
+    const children = data.items?.map(processItem) || [];
 
-      return {
-        url: item.url.url || item.path || '/',
-        title: item.title,
-        label: item.label,
-        items: itemItems,
-      };
-    });
-  } else {
-    sidebarItems = navConfig;
-  }
+    return {
+      url: data.url?.url || data.path || '/',
+      title: data.title,
+      label: data.label,
+      items: children,
+    };
+  };
+
+  const sidebarItems =
+    sidebar.data.items.length > 0 ? sidebar.data.items.map(processItem) : navConfig;
 
   const localizePath = useLocalizePath();
 
   const { t } = useTranslation();
 
-  const { user } = useUserContext();
+  const { user, loading } = useUserContext();
 
   const { isCollapsed, collapseMenu, manual, setManual } = useMenuContext();
 
   const [isMobile, setIsMobile] = useState(false);
 
-  const [isUserLoggedIn, setIsUserLoggedIn] = useState(null);
+  const isUserLoggedIn = user && !loading;
 
   const [redirectTo, setRedirectTo] = useState('/');
+
+  // Safe access to localStorage using browser check
+  const [expandedNodes, setExpandedNodes] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedState = localStorage.getItem('sidebarExpandedNodes');
+
+      return savedState ? JSON.parse(savedState) : {};
+    }
+    return {};
+  });
+
+  // Toggle the expansion of a node and save to localStorage
+  const toggleExpand = (item) => {
+    setExpandedNodes((prevState) => {
+      const newState = {
+        ...prevState,
+        [item.url || item.path || item.title]: !prevState[item.url || item.path || item.title],
+      };
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sidebarExpandedNodes', JSON.stringify(newState)); // Save to localStorage
+      }
+      return newState;
+    });
+  };
+
+  const toggleAllItems = () => {
+    setExpandedNodes([]);
+    localStorage.setItem('sidebarExpandedNodes', JSON.stringify({}));
+  };
 
   useEffect(() => {
     if (!manual) {
@@ -123,16 +160,14 @@ const Sidebar = ({ defaultCollapsed = false, location = null, setNavCollapsed })
       }
     }
 
+    handleResize();
+
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
     };
   }, []);
-
-  useEffect(() => {
-    setIsUserLoggedIn(!!user?.profile.email);
-  }, [user]);
 
   // We want the bottom edge of the sidebar
   // to rest at bottom edge of the viewport.
@@ -188,7 +223,9 @@ const Sidebar = ({ defaultCollapsed = false, location = null, setNavCollapsed })
       <aside
         id="sidebar"
         aria-label="Sidebar"
-        className={`${sidebarWidth} sticky top-0 flex flex-col md:bg-text-light-gray z-2`}
+        className={`${sidebarWidth} sticky top-0 flex flex-col md:bg-text-light-gray z-2 ${
+          isCollapsed ? 'collapsed' : ''
+        }`}
         style={{
           height:
             (headerVisiblePixels && !isMobile) || window.innerWidth > 768
@@ -210,6 +247,8 @@ const Sidebar = ({ defaultCollapsed = false, location = null, setNavCollapsed })
             setNavCollapsed={setNavCollapsed}
             isCollapsed={isCollapsed}
             localizePath={localizePath}
+            expandedNodes={expandedNodes} // Pass the expandedNodes state
+            toggleExpand={toggleExpand} // Pass the toggleExpand function
             additionalNodes={[
               {
                 label: 'user',
@@ -219,6 +258,7 @@ const Sidebar = ({ defaultCollapsed = false, location = null, setNavCollapsed })
               },
             ]}
             items={sidebarItems}
+            isMobile={isMobile}
           />
           {config.sidebar.links && config.sidebar.links?.length > 0 && (
             <li className="tw-li-divider">
@@ -274,8 +314,8 @@ const Sidebar = ({ defaultCollapsed = false, location = null, setNavCollapsed })
                 // to one that is not its default value,
                 // that state should be preserved across pages.
                 setManual(defaultCollapsed == isCollapsed);
-
                 collapseMenu(!isCollapsed);
+                toggleAllItems();
               }}
             />
           </div>

@@ -1,31 +1,34 @@
 import { Report } from '../../../server/generated/graphql'
-
-type DBReport = Omit<Report, 'user'>
-    & { user: string }
+import { DBReport } from '../../../server/interfaces';
 
 const items: DBReport[] = [
     {
         report_number: 1,
         title: "Report 1",
         authors: ["author1"],
-        cloudinary_id: "cloudinary_id1",
-        date_downloaded: new Date("2020-01-01"),
-        date_modified: new Date("2020-01-01"),
-        date_published: new Date("2020-01-01"),
-        date_submitted: new Date("2020-01-01"),
+        cloudinary_id: "reports/upload.wikimedia.org/wikipedia/commons/e/e9/Felis_silvestris_silvestris_small_gradual_decrease_of_quality.png",
+        date_downloaded: new Date("2020-01-01T00:00:00.000Z"),
+        date_modified: new Date("2024-10-29T00:49:45.572Z"),
+        date_published: new Date("2020-01-01T00:00:00.000Z"),
+        date_submitted: new Date("2020-01-01T00:00:00.000Z"),
         epoch_date_downloaded: 1577836800,
-        epoch_date_modified: 1577836800,
+        epoch_date_modified: 1730162985,
         epoch_date_published: 1577836800,
         epoch_date_submitted: 1577836800,
-        image_url: "image_url1",
+        image_url: "https://upload.wikimedia.org/wikipedia/commons/e/e9/Felis_silvestris_silvestris_small_gradual_decrease_of_quality.png",
         language: "en",
-        plain_text: "plain_text1",
-        text: "text1",
-        source_domain: "source_domain1",
+        plain_text: "A malfunction in the AI-driven traffic management system caused widespread traffic congestion and several accidents in the downtown area, leading to a review of the system’s safety protocols.\n",
+        text: "A malfunction in the AI-driven traffic management system caused widespread traffic congestion and several accidents in the downtown area, leading to a review of the system’s safety protocols.",
+        source_domain: "report1.com",
         submitters: ["submitter1"],
         tags: ["tag1"],
-        url: "url1",
-        user: "user1",
+        url: "https://report1.com",
+        user: "6737a6e881955aa4905ccb04",
+        is_incident_report: true,
+        editor_notes: null,
+        flag: null,
+        inputs_outputs: null,
+        quiet: null,
     },
     {
         title: "Report 2",
@@ -51,8 +54,8 @@ const items: DBReport[] = [
         source_domain: "source_domain1",
         submitters: ["submitter1"],
         tags: ["tag1"],
-        url: "url1",
-        user: "user1",
+        url: "https://report2.com",
+        user: "6737a6e881955aa4905ccb04",
     },
     {
         _id: "5d34b8c29ced494f010ed469",
@@ -90,7 +93,7 @@ const items: DBReport[] = [
         is_incident_report: true,
 
         // TODO: this report (16) has no user in the database but is the user field  is required by the schema
-        user: 'user1',
+        user: '6737a6e881955aa4905ccb04',
 
         // TODO: field is present in the db but not mapped to any graphql field
         // created_at: 1559347200000
@@ -132,7 +135,7 @@ const items: DBReport[] = [
         is_incident_report: true,
 
         // TODO: ditto
-        user: 'user1',
+        user: '6737a6e881955aa4905ccb04',
 
         // TODO: ditto
         // created_at: 1559347200000
@@ -174,7 +177,7 @@ const items: DBReport[] = [
         is_incident_report: false,
 
         // TODO: ditto
-        user: 'user1',
+        user: '6737a6e881955aa4905ccb04',
 
         // TODO: ditto
         // created_at: 1559347200000
@@ -271,7 +274,49 @@ const items: DBReport[] = [
         title: "",
         editor_notes: "",
         user: "",
-    }
+    },
+    {
+        authors: [
+            "News Writer"
+        ],
+        date_downloaded: new Date(1555113600000),
+        date_modified: new Date(1592092800000),
+        date_published: new Date(1440633600000),
+        date_submitted: new Date(1559347200000),
+        description: "Response Report",
+        epoch_date_downloaded: 1555113600,
+        epoch_date_modified: 1592092800,
+        epoch_date_published: 1440633600,
+        epoch_date_submitted: 1559347200,
+        image_url: "https://cdn.ttgtmedia.com/visuals/searchFinancialApplications/hr_technology/financialapplications_article_004.jpg",
+        language: "en",
+        report_number: 9,
+        source_domain: "searchhrsoftware.techtarget.com",
+        submitters: [
+            "Catherine Olsson"
+        ],
+        text: "Response report 9 text",
+        title: "Response Issue Report 9",
+        url: "https://searchhrsoftware.techtarget.com/news/4500252451/Kronos-shift-scheduling-software-a-grind-for-Starbucks-worker",
+        tags: ["response"],
+        plain_text: "Response report 9 text",
+        editor_notes: "",
+        cloudinary_id: "reports/cdn.ttgtmedia.com/visuals/searchFinancialApplications/hr_technology/financialapplications_article_004.jpg",
+        embedding: {
+            vector: [
+                -0.09370243549346924,
+                0.10497249662876129
+            ],
+            from_text_hash: "6dfba3c22a24c31e017dfbe8594e312cc127cb38"
+        },
+        is_incident_report: false,
+
+        // TODO: ditto
+        user: 'user1',
+
+        // TODO: ditto
+        // created_at: 1559347200000
+    },
 ]
 
 export default items;

@@ -1,4 +1,4 @@
-import { conditionalIntercept, waitForRequest, query, setEditorText, getEditorText, test } from '../utils';
+import { query, setEditorText, getEditorText, test } from '../utils';
 import { expect } from '@playwright/test';
 import config from '../config';
 import { init } from '../memory-mongo';
@@ -9,33 +9,18 @@ import gql from 'graphql-tag';
 test.describe('Edit report', () => {
   const url = '/cite/edit?report_number=3&incident_id=3';
 
+  test.beforeEach(async () => {
+
+    await init();
+  });
+
   test('Successfully loads', async ({ page }) => {
     await page.goto(url);
   });
 
   test('Should load and update report values', async ({ page, login }) => {
 
-    test.slow();
-
-    const userId = await login(config.E2E_ADMIN_USERNAME, config.E2E_ADMIN_PASSWORD);
-    await init({ customData: { users: [{ userId, first_name: 'Test', last_name: 'User', roles: ['admin'] }] }, }, { drop: true });
-
-    // TODO: delete once we implement the new report history
-    // it should be done inside the report mutation resolver
-
-    await conditionalIntercept(
-      page,
-      '**/graphql',
-      (req) => req.postDataJSON().operationName == 'logReportHistory',
-      {
-        data: {
-          logReportHistory: {
-            report_number: 3,
-          },
-        },
-      },
-      'logReportHistory'
-    );
+    await login();
 
     await page.goto(url);
 
@@ -102,8 +87,6 @@ test.describe('Edit report', () => {
 
     await page.getByRole('button', { name: 'Submit' }).click();
 
-    await waitForRequest('logReportHistory');
-
     await expect(page.getByText('Incident report 3 updated successfully.')).toBeVisible();
 
     const { data } = await query({
@@ -145,18 +128,7 @@ test.describe('Edit report', () => {
 
   test('Should load and update Issue values', async ({ page, login }) => {
 
-    test.slow();
-
-    const userId = await login(config.E2E_ADMIN_USERNAME, config.E2E_ADMIN_PASSWORD);
-    await init({ customData: { users: [{ userId, first_name: 'Test', last_name: 'User', roles: ['admin'] }] } }, { drop: true });
-
-    await conditionalIntercept(
-      page,
-      '**/graphql',
-      (req) => req.postDataJSON().operationName == 'logReportHistory',
-      { data: { logReportHistory: { report_number: 5 } } },
-      'logReportHistory'
-    );
+    await login();
 
     await page.goto('/cite/edit?report_number=5');
 
@@ -186,8 +158,6 @@ test.describe('Edit report', () => {
 
 
     await page.getByRole('button', { name: 'Submit' }).click();
-
-    await waitForRequest('logReportHistory');
 
     await expect(page.getByText('Issue 5 updated successfully')).toBeVisible({ timeout: 45000 });
 
@@ -231,8 +201,7 @@ test.describe('Edit report', () => {
 
   test('Should delete incident report', async ({ page, login }) => {
 
-    const userId = await login(config.E2E_ADMIN_USERNAME, config.E2E_ADMIN_PASSWORD);
-    await init({ customData: { users: [{ userId, first_name: 'Test', last_name: 'User', roles: ['admin'] }] } }, { drop: true });
+    await login();
 
     await page.goto(url);
 
@@ -255,31 +224,14 @@ test.describe('Edit report', () => {
       }`
     });
 
-    expect(result.data.reports).toHaveLength(7);
+    expect(result.data.reports).toHaveLength(8);
     expect(result.data.reports).not.toContainEqual({ report_number: 3 });
     expect(result.data.incident.reports).not.toContainEqual({ report_number: 3 });
   });
 
   test('Should link a report to another incident', async ({ page, login }) => {
 
-    test.slow();
-
-    const userId = await login(config.E2E_ADMIN_USERNAME, config.E2E_ADMIN_PASSWORD);
-    await init({ customData: { users: [{ userId, first_name: 'Test', last_name: 'User', roles: ['admin'] }] } }, { drop: true });
-
-    await conditionalIntercept(
-      page,
-      '**/graphql',
-      (req) => req.postDataJSON().operationName == 'logReportHistory',
-      {
-        data: {
-          logReportHistory: {
-            report_number: 3,
-          },
-        },
-      },
-      'logReportHistory'
-    );
+    await login(config.E2E_ADMIN_USERNAME, config.E2E_ADMIN_PASSWORD, { customData: { roles: ['admin'] } });
 
     await page.goto(`/cite/edit?report_number=3`);
 
@@ -295,7 +247,7 @@ test.describe('Edit report', () => {
 
     await page.getByRole('button', { name: 'Submit' }).click();
 
-    await expect(page.locator('[data-cy="toast"]')).toContainText('Incident report 3 updated successfully', { timeout: 60000 });
+    await expect(page.locator('[data-cy="toast"]')).toContainText('Incident report 3 updated successfully');
 
     const result = await query({
       query: gql`{
@@ -321,18 +273,7 @@ test.describe('Edit report', () => {
 
   test('Should convert an incident report to an issue', async ({ page, login }) => {
 
-    test.slow();
-
-    const userId = await login(config.E2E_ADMIN_USERNAME, config.E2E_ADMIN_PASSWORD);
-    await init({ customData: { users: [{ userId, first_name: 'Test', last_name: 'User', roles: ['admin'] }] } }, { drop: true });
-
-    await conditionalIntercept(
-      page,
-      '**/graphql',
-      (req) => req.postDataJSON().operationName == 'logReportHistory',
-      { data: { logReportHistory: { report_number: 3 } } },
-      'logReportHistory'
-    );
+    await login();
 
     await page.goto(`/cite/edit?report_number=3`);
 
@@ -371,9 +312,7 @@ test.describe('Edit report', () => {
 
   test('Should display the report image', async ({ page, login }) => {
 
-    const userId = await login(config.E2E_ADMIN_USERNAME, config.E2E_ADMIN_PASSWORD);
-    await init({ customData: { users: [{ userId, first_name: 'Test', last_name: 'User', roles: ['admin'] }] } }, { drop: true });
-
+    await login();
     await page.goto(url);
 
     await page.locator('[data-cy="image-preview-figure"] img').waitFor();

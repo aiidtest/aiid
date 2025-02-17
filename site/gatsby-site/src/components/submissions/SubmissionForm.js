@@ -32,6 +32,7 @@ import {
   faAlignLeft,
   faStickyNote,
   faTenge,
+  faGear,
 } from '@fortawesome/free-solid-svg-icons';
 import FlowbiteSearchInput from 'components/forms/FlowbiteSearchInput';
 import { Checkbox, Select } from 'flowbite-react';
@@ -95,7 +96,14 @@ const SubmissionForm = ({ onChange = null }) => {
           cloudinary_id,
         };
 
-        for (const key of ['authors', 'submitters', 'developers', 'deployers', 'harmed_parties']) {
+        for (const key of [
+          'authors',
+          'submitters',
+          'developers',
+          'deployers',
+          'harmed_parties',
+          'implicated_systems',
+        ]) {
           if (newValues[key] && !Array.isArray(newValues[key])) {
             newValues[key] = [newValues[key]];
           }
@@ -191,7 +199,12 @@ const SubmissionForm = ({ onChange = null }) => {
           btnDisabled={!!errors.url || !touched.url || parsingNews}
           btnText={t('Fetch info')}
         />
-        <RelatedIncidents incident={values} setFieldValue={setFieldValue} columns={['byURL']} />
+        <RelatedIncidents
+          incident={values}
+          setFieldValue={setFieldValue}
+          columns={['byURL']}
+          triggerSearch={values['url']?.length}
+        />
 
         <TextInputGroup
           name="title"
@@ -211,7 +224,12 @@ const SubmissionForm = ({ onChange = null }) => {
           {...TextInputGroupProps}
         />
 
-        <RelatedIncidents incident={values} setFieldValue={setFieldValue} columns={['byAuthors']} />
+        <RelatedIncidents
+          incident={values}
+          setFieldValue={setFieldValue}
+          columns={['byAuthors']}
+          triggerSearch={values['authors']?.length}
+        />
 
         <TagsInputGroup
           name="submitters"
@@ -236,6 +254,7 @@ const SubmissionForm = ({ onChange = null }) => {
           incident={values}
           setFieldValue={setFieldValue}
           columns={['byDatePublished']}
+          triggerSearch={values['date_published']?.length}
         />
 
         <TextInputGroup
@@ -346,6 +365,7 @@ const SubmissionForm = ({ onChange = null }) => {
           incident={values}
           setFieldValue={setFieldValue}
           columns={['byIncidentId']}
+          triggerSearch={values['incident_ids']?.length}
         />
 
         <div className="mt-3">
@@ -419,6 +439,16 @@ const SubmissionForm = ({ onChange = null }) => {
               label={t('Alleged harmed or nearly harmed parties')}
               icon={faBolt}
               placeholder={t('Who experienced negative impacts?')}
+              className="mt-3"
+              options={entityNames}
+              {...TextInputGroupProps}
+            />
+
+            <TagsInputGroup
+              name="implicated_systems"
+              label={t('Alleged implicated AI systems')}
+              icon={faGear}
+              placeholder={t('Which AI systems were involved?')}
               className="mt-3"
               options={entityNames}
               {...TextInputGroupProps}

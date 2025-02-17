@@ -24,15 +24,6 @@ jobs:
     with:
       skip-cache: ${{ github.event.inputs.skip-cache }}
 
-  call-atlas:
-    uses: ./.github/workflows/realm.yml
-    secrets: inherit
-    needs: cache-modifier
-    with:
-      sha: ${{ github.sha }}
-      environment: production
-      runner-label: ${{ vars.PRODUCTION_RUNNER_LABEL }}
-
   call-test-api:
     uses: ./.github/workflows/test-api.yml
     needs: cache-modifier
@@ -44,21 +35,11 @@ jobs:
   call-test-build:
     uses: ./.github/workflows/test-build.yml
     secrets: inherit
-    needs: [cache-modifier, call-atlas]
+    needs: [cache-modifier]
     with:
       sha: ${{ github.sha }}
       environment: production
       netlify-context: production
-      runner-label: ${{ vars.PRODUCTION_RUNNER_LABEL }}
-      cache-modifier: ${{ needs.cache-modifier.outputs.cache-modifier  }}
-
-  call-test:
-    uses: ./.github/workflows/test.yml
-    needs: [cache-modifier, call-test-build]
-    secrets: inherit
-    with:
-      sha: ${{ github.sha }}
-      environment: production
       runner-label: ${{ vars.PRODUCTION_RUNNER_LABEL }}
       cache-modifier: ${{ needs.cache-modifier.outputs.cache-modifier  }}
 
@@ -71,9 +52,9 @@ jobs:
       environment: production
       runner-label: ${{ vars.PRODUCTION_RUNNER_LABEL }}
 
-  call-test-playwright-full:
+  call-test-playwright-e2e:
     if: ${{ !failure() && !cancelled() }}
-    uses: ./.github/workflows/test-playwright-full.yml
+    uses: ./.github/workflows/test-playwright-e2e.yml
     needs: [cache-modifier]
     secrets: inherit
     with:
@@ -84,7 +65,13 @@ jobs:
   call-deploy:
     if: (inputs.force-deploy == true || success()) && !cancelled()
     uses: ./.github/workflows/deploy.yml
-    needs: [cache-modifier, call-test, call-test-api, call-test-playwright]
+    needs:
+      [
+        cache-modifier,
+        call-test-api,
+        call-test-playwright,
+        call-test-playwright-e2e,
+      ]
     secrets: inherit
     permissions:
       pull-requests: write
@@ -95,3 +82,12 @@ jobs:
       netlify-alias:
       runner-label: ${{ vars.PRODUCTION_RUNNER_LABEL }}
       cache-modifier: ${{ needs.cache-modifier.outputs.cache-modifier  }}
+
+  call-process-notifications:
+    needs: call-deploy
+    uses: ./.github/workflows/process-notifications.yml
+    secrets: inherit
+    with:
+      environment: production
+      # inputs from the workflow_dispatch event come as strings even if they are explicitly defined as boolean
+      force-deploy: ${{ inputs.force-deploy == 'true' }}

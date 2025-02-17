@@ -1,11 +1,7 @@
 import { ObjectId } from "bson";
 import { Fixture } from "../utils";
 import { Incident, IncidentInsertType, IncidentUpdateType } from "../../generated/graphql";
-
-type DBIncident = Omit<Incident, 'AllegedDeployerOfAISystem' | 'AllegedDeveloperOfAISystem' | 'AllegedHarmedOrNearlyHarmedParties' | 'reports' | 'editors'>
-    & { "Alleged deployer of AI system": string[], "Alleged developer of AI system": string[], "Alleged harmed or nearly harmed parties": string[] }
-    & { reports: number[] }
-    & { editors: string[] }
+import { DBIncident } from "../../interfaces";
 
 const subscriber = {
     _id: new ObjectId('60a7c5b7b4f5b8a6d8f9c7e6'),
@@ -158,6 +154,7 @@ const incident1: DBIncident = {
     "Alleged deployer of AI system": [],
     "Alleged developer of AI system": [],
     "Alleged harmed or nearly harmed parties": [],
+    implicated_systems: [],
     description: "Test description 1",
     title: "Test Incident 1",
     editors: [
@@ -191,6 +188,7 @@ const incident1: DBIncident = {
         y: -0.2
     },
     reports: [1, 2],
+    editor_notes: "Sample editor notes",
 };
 
 const incident2: DBIncident = {
@@ -205,6 +203,7 @@ const incident2: DBIncident = {
         "entity1"
     ],
     "Alleged harmed or nearly harmed parties": [],
+    implicated_systems: [],
     description: "Test description 2",
     title: "Test Incident 2",
     editors: [
@@ -238,6 +237,7 @@ const incident2: DBIncident = {
         y: -0.4
     },
     reports: [3],
+    editor_notes: "",
 };
 
 const incident3: DBIncident = {
@@ -285,6 +285,8 @@ const incident3: DBIncident = {
         y: -0.6
     },
     reports: [2, 3],
+    implicated_systems: ['test system 1'],
+    editor_notes: "",
 };
 
 const fixture: Fixture<Incident, IncidentUpdateType, IncidentInsertType> = {
@@ -329,6 +331,9 @@ const fixture: Fixture<Incident, IncidentUpdateType, IncidentInsertType> = {
             user {
                 userId
             }
+        }
+        implicated_systems {
+            entity_id
         }
     `,
     seeds: {
@@ -404,14 +409,14 @@ const fixture: Fixture<Incident, IncidentUpdateType, IncidentInsertType> = {
         allowed: [editor1],
         denied: [anonymous, subscriber],
         filter: { _id: { EQ: incident1._id } },
-        update: { set: { title: 'edited title' } },
-        result: { title: 'edited title' }
+        update: { set: { title: 'edited title', AllegedDeployerOfAISystem: { link: ['entity1'] } } },
+        result: { title: 'edited title', AllegedDeployerOfAISystem: [{ entity_id: 'entity1' }] }
     },
     testUpdateMany: {
         allowed: [editor1],
         denied: [subscriber],
         filter: { incident_id: { EQ: 1 } },
-        update: { set: { title: 'edited tile' } },
+        update: { set: { title: 'edited tile', AllegedDeployerOfAISystem: { link: ['entity1'] } } },
         result: { modifiedCount: 1, matchedCount: 1 }
     },
     testInsertOne: {
@@ -423,6 +428,9 @@ const fixture: Fixture<Incident, IncidentUpdateType, IncidentInsertType> = {
             reports: { link: [1, 2] },
             incident_id: 5,
             editors: { link: [editor1.userId] },
+            editor_notes: "",
+            flagged_dissimilar_incidents: [],
+            AllegedDeployerOfAISystem: { link: ['entity1'] },
         },
         result: {
             _id: expect.any(String),
@@ -434,6 +442,9 @@ const fixture: Fixture<Incident, IncidentUpdateType, IncidentInsertType> = {
             ],
             editors: [
                 { userId: 'editor1' }
+            ],
+            AllegedDeployerOfAISystem: [
+                { entity_id: 'entity1' }
             ]
         }
     },

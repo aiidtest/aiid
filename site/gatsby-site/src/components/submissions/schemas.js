@@ -29,6 +29,13 @@ const harmed_parties = yup.array(
     .max(200, "Harmed Parties can't be longer than 200 characters")
 );
 
+const implicated_systems = yup.array(
+  yup
+    .string()
+    .min(3, 'Implicated AI systems must have at least 3 characters')
+    .max(200, "Implicated AI systems can't be longer than 200 characters")
+);
+
 const incident_ids = yup.array(yup.number().integer().positive());
 
 const incident_date = yup
@@ -139,7 +146,7 @@ export const schema = yup.object().shape({
       message: "Incident Editor can't be longer than 200 characters",
     })
     .nullable(),
-  editor_notes: yup.string(),
+  editor_notes: yup.string().nullable(),
 });
 
 export const incidentSchema = schema.shape({
@@ -150,6 +157,7 @@ export const incidentSchema = schema.shape({
   description: description.required('*Description is required'),
   incident_date: incident_date.required('*Incident Date required'),
   incident_ids: yup.mixed(),
+  implicated_systems,
 });
 
 export const reportSchema = schema.shape({

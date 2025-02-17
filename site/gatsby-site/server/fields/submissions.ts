@@ -8,11 +8,11 @@ import {
     GraphQLInputObjectType
 } from 'graphql';
 import { generateMutationFields, generateQueryFields } from '../utils';
-import { Context } from '../interfaces';
+import { Context, DBIncident, DBNotification, DBSubmission } from '../interfaces';
 import { allow } from 'graphql-shield';
 import { ObjectIdScalar } from '../scalars';
 import { isRole } from '../rules';
-import { linkReportsToIncidents } from './common';
+import { createNotificationsOnNewIncident, linkReportsToIncidents } from './common';
 import { SubmissionType } from '../types/submission';
 
 
@@ -57,10 +57,12 @@ export const mutationFields: GraphQLFieldConfigMap<any, Context> = {
 
         resolve: async (source, { input }, context) => {
 
-            const submissions = context.client.db('aiidprod').collection("submissions");
-            const incidents = context.client.db('aiidprod').collection("incidents");
+            const submissions = context.client.db('aiidprod').collection<DBSubmission>("submissions");
+            const incidents = context.client.db('aiidprod').collection<DBIncident>("incidents");
+
+            // TODO: Strictly type these collections using the DB* types
             const reports = context.client.db('aiidprod').collection("reports");
-            const notificationsCollection = context.client.db('customData').collection("notifications");
+            const notificationsCollection = context.client.db('customData').collection<DBNotification>("notifications");
             const incidentsHistory = context.client.db('history').collection("incidents");
             const reportsHistory = context.client.db('history').collection("reports");
 
@@ -70,9 +72,9 @@ export const mutationFields: GraphQLFieldConfigMap<any, Context> = {
                 throw new Error('Submission not found');
             }
 
-            const { _id: undefined, ...submission } = target;
+            const { _id: undefined, ...submission }: DBSubmission = target;
 
-            const parentIncidents: Array<Record<string, unknown> & { incident_id?: number, reports?: Record<string, unknown>[] }> = await incidents.find({ incident_id: { $in: input.incident_ids } }).toArray();
+            const parentIncidents: DBIncident[] = await incidents.find({ incident_id: { $in: input.incident_ids } }).toArray();
 
             const lastReport = await reports.find({}).sort({ report_number: -1 }).limit(1).next();
 
@@ -90,20 +92,23 @@ export const mutationFields: GraphQLFieldConfigMap<any, Context> = {
                         ? ['65031f49ec066d7c64380f5c'] // Default user. For more information refer to the wiki page: https://github.com/responsible-ai-collaborative/aiid/wiki/Special-non%E2%80%90secret-values
                         : submission.incident_editors;
 
-                    const newIncident: Record<string, unknown> = {
+                    const newIncident: DBIncident = {
                         title: submission.incident_title || submission.title,
                         description: submission.description,
                         incident_id,
                         reports: [],
                         editors,
-                        date: submission.incident_date,
-                        epoch_date_modified: submission.epoch_date_modified,
+                        date: submission.incident_date!,
                         "Alleged deployer of AI system": submission.deployers || [],
                         "Alleged developer of AI system": submission.developers || [],
                         "Alleged harmed or nearly harmed parties": submission.harmed_parties || [],
                         nlp_similar_incidents: submission.nlp_similar_incidents || [],
                         editor_similar_incidents: submission.editor_similar_incidents || [],
                         editor_dissimilar_incidents: submission.editor_dissimilar_incidents || [],
+                        implicated_systems: submission.implicated_systems || [],
+                        editor_notes: submission.editor_notes ?? '',
+                        flagged_dissimilar_incidents: [],
+                        created_at: new Date(),
                     }
                     if (submission.embedding) {
                         newIncident.embedding = {
@@ -111,8 +116,15 @@ export const mutationFields: GraphQLFieldConfigMap<any, Context> = {
                             from_reports: [report_number]
                         }
                     }
+                    if (submission.epoch_date_modified) {
+                        newIncident.epoch_date_modified = submission.epoch_date_modified;
+                    }
 
-                    await incidents.insertOne({ ...newIncident, incident_id: newIncident.incident_id });
+                    await incidents.insertOne({ ...newIncident, incident_id: newIncident.incident_id, created_at: new Date() });
+
+
+                    await createNotificationsOnNewIncident(newIncident, context);
+
 
                     if (submission.user) {
 
@@ -120,7 +132,8 @@ export const mutationFields: GraphQLFieldConfigMap<any, Context> = {
                             type: 'submission-promoted',
                             incident_id: newIncident.incident_id,
                             processed: false,
-                            userId: submission.user
+                            userId: submission.user,
+                            created_at: new Date(),
                         });
                     }
 
@@ -128,6 +141,7 @@ export const mutationFields: GraphQLFieldConfigMap<any, Context> = {
                         ...newIncident,
                         reports: [report_number],
                         incident_id: newIncident.incident_id,
+                        created_at: new Date(),
                     };
 
                     if (submission.user) {
@@ -193,6 +207,7 @@ export const mutationFields: GraphQLFieldConfigMap<any, Context> = {
                             ...incidentValues,
                             reports: [...incidentValues.reports!, report_number],
                             embedding,
+                            created_at: new Date(),
                         }
 
                         if (submission.user) {
@@ -212,7 +227,6 @@ export const mutationFields: GraphQLFieldConfigMap<any, Context> = {
                 date_published: new Date(submission.date_published),
                 date_submitted: new Date(submission.date_submitted),
                 epoch_date_downloaded: getUnixTime(submission.date_downloaded),
-                epoch_date_modified: submission.epoch_date_modified,
                 epoch_date_published: getUnixTime(submission.date_published),
                 epoch_date_submitted: getUnixTime(submission.date_submitted),
                 image_url: submission.image_url,
@@ -235,7 +249,11 @@ export const mutationFields: GraphQLFieldConfigMap<any, Context> = {
                 newReport.user = submission.user;
             }
 
-            await reports.insertOne({ ...newReport, report_number: newReport.report_number });
+            if (submission.epoch_date_modified) {
+                newReport.epoch_date_modified = submission.epoch_date_modified;
+            }
+
+            await reports.insertOne({ ...newReport, report_number: newReport.report_number, created_at: new Date() });
 
             const incident_ids: number[] = parentIncidents.map(incident => incident.incident_id!);
             const report_numbers: number[] = [newReport.report_number];

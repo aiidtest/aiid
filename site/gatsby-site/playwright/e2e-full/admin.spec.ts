@@ -5,6 +5,10 @@ import { init } from '../memory-mongo';
 test.describe('Admin', () => {
   const baseUrl = '/admin';
 
+  test.beforeEach(async () => {
+    await init();
+  });
+
   test('Should show not enough permissions message', async ({ page }) => {
     await page.goto(baseUrl);
     await expect(page.getByText("Not enough permissions")).toBeVisible({ timeout: 30000 });
@@ -14,11 +18,8 @@ test.describe('Admin', () => {
     'Should display a list of users, their roles and allow edition',
     async ({ page, login, skipOnEmptyEnvironment }) => {
 
-      const userId = await login(process.env.E2E_ADMIN_USERNAME, process.env.E2E_ADMIN_PASSWORD);
-
+      const [userId] = await login();
       const users = [{ userId, first_name: 'John', last_name: 'Doe', roles: ['admin'] }];
-
-      await init({ customData: { users } }, { drop: true });
 
       await page.goto(baseUrl);
 
@@ -51,9 +52,7 @@ test.describe('Admin', () => {
     'Should display New Incident button',
     async ({ page, login, skipOnEmptyEnvironment }) => {
 
-      const userId = await login(process.env.E2E_ADMIN_USERNAME, process.env.E2E_ADMIN_PASSWORD);
-
-      await init({ customData: { users: [{ userId, first_name: 'John', last_name: 'Doe', roles: ['admin'] }] } }, { drop: true });
+      await login();
 
       await page.goto(baseUrl);
 
@@ -67,16 +66,13 @@ test.describe('Admin', () => {
     'Should filter results',
     async ({ page, login, skipOnEmptyEnvironment }) => {
 
-      const userId = await login(process.env.E2E_ADMIN_USERNAME, process.env.E2E_ADMIN_PASSWORD);
-
-      await init({ customData: { users: [{ userId, first_name: 'John', last_name: 'Doe', roles: ['admin'] }] } }, { drop: true });
-
+      await login();
 
       await page.goto(baseUrl);
 
 
-      await page.locator('[data-cy="input-filter-First Name"]').fill('John');
-      await page.locator('[data-cy="input-filter-Last Name"]').fill('Doe');
+      await page.locator('[data-cy="input-filter-First Name"]').fill('Test');
+      await page.locator('[data-cy="input-filter-Last Name"]').fill('User');
       await page.locator('[data-cy="input-filter-Roles"]').fill('admin');
 
       // TODO: find a way to mock admin api and adminData graphql field

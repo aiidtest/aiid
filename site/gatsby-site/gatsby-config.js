@@ -11,6 +11,12 @@ cloudinary.config({ cloud_name: config.cloudinary.cloudName });
 
 const adapter = require('gatsby-adapter-netlify').default;
 
+let googleTrackingIds = [];
+
+if (process.env.SITE_URL === config.gatsby.siteUrl) {
+  googleTrackingIds.push(config.gatsby.gaTrackingId);
+}
+
 const plugins = [
   'layout',
   {
@@ -32,7 +38,6 @@ const plugins = [
           resolve: 'gatsby-remark-images',
           options: {
             maxWidth: 1035,
-            sizeByPixelDensity: true,
           },
         },
         {
@@ -66,7 +71,7 @@ const plugins = [
   {
     resolve: `gatsby-plugin-google-gtag`,
     options: {
-      trackingIds: [config.gatsby.gaTrackingId],
+      trackingIds: googleTrackingIds,
     },
   },
   {
@@ -82,11 +87,12 @@ const plugins = [
         'classifications',
         'reports',
         'entities',
+        'entity_relationships',
       ],
       connectionString: config.mongodb.connectionString,
-      extraParams: {
-        replicaSet: config.mongodb.replicaSet,
-      },
+      ...(config.mongodb.replicaSet
+        ? { extraParams: { replicaSet: config.mongodb.replicaSet } }
+        : {}),
     },
   },
   {
@@ -101,9 +107,9 @@ const plugins = [
         []
       ),
       connectionString: config.mongodb.connectionString,
-      extraParams: {
-        replicaSet: config.mongodb.replicaSet,
-      },
+      ...(config.mongodb.replicaSet
+        ? { extraParams: { replicaSet: config.mongodb.replicaSet } }
+        : {}),
     },
   },
   {
@@ -246,6 +252,7 @@ const plugins = [
           'footer',
           'sponsors',
           'incidents',
+          'auth',
         ],
         debug: process.env.GATSBY_I18N_DEBUG,
         nsSeparator: false,

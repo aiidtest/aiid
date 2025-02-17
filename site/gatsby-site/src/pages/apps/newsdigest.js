@@ -14,10 +14,11 @@ import {
   faBolt,
 } from '@fortawesome/free-solid-svg-icons';
 import HeadContent from 'components/HeadContent';
-import { useUserContext } from 'contexts/userContext';
+import { useUserContext } from 'contexts/UserContext';
 import CardSkeleton from 'elements/Skeletons/Card';
 import { useLocalization } from 'plugins/gatsby-theme-i18n';
 import useLocalizePath from 'components/i18n/useLocalizePath';
+import useToast, { SEVERITY } from '../../hooks/useToast';
 
 export default function NewsSearchPage() {
   const { t } = useTranslation(['submit']);
@@ -28,8 +29,8 @@ export default function NewsSearchPage() {
 
   const { data: newsArticlesData, loading } = useQuery(
     gql`
-      query NewsArticles($query: CandidateQueryInput!) {
-        candidates(query: $query, limit: 9999) {
+      query NewsArticles($filter: CandidateFilterType!) {
+        candidates(filter: $filter) {
           title
           url
           similarity
@@ -38,22 +39,25 @@ export default function NewsSearchPage() {
           matching_entities
           date_published
           dismissed
+          text
         }
       }
     `,
     {
       variables: {
-        query: {
-          match: true,
-          date_published_in: Array(14)
-            .fill()
-            .map((e, i) =>
-              new Date(
-                new Date().getTime() - 86400000 * i // i days ago
-              )
-                .toISOString()
-                .slice(0, 10)
-            ),
+        filter: {
+          match: { EQ: true },
+          date_published: {
+            IN: Array(14)
+              .fill()
+              .map((e, i) =>
+                new Date(
+                  new Date().getTime() - 86400000 * i // i days ago
+                )
+                  .toISOString()
+                  .slice(0, 10)
+              ),
+          },
         },
       },
     }
@@ -61,30 +65,46 @@ export default function NewsSearchPage() {
 
   const { data: submissionsData } = useQuery(
     gql`
-      query ExistingSubmissions($query: SubmissionQueryInput!) {
-        submissions(query: $query, limit: 9999) {
+      query ExistingSubmissions($filter: SubmissionFilterType!) {
+        submissions(filter: $filter) {
           url
         }
       }
     `,
-    { variables: { query: { url_in: newsArticleUrls } } }
+    {
+      variables: {
+        filter: {
+          url: {
+            IN: newsArticleUrls,
+          },
+        },
+      },
+    }
   );
 
   const { data: reportsData } = useQuery(
     gql`
-      query ExistingReports($query: ReportQueryInput!) {
-        reports(query: $query, limit: 9999) {
+      query ExistingReports($filter: ReportFilterType!) {
+        reports(filter: $filter) {
           report_number
           url
         }
       }
     `,
-    { variables: { query: { url_in: newsArticleUrls } } }
+    {
+      variables: {
+        filter: {
+          url: {
+            IN: newsArticleUrls,
+          },
+        },
+      },
+    }
   );
 
   const [updateCandidate] = useMutation(gql`
-    mutation UpdateCandidate($query: CandidateQueryInput!, $set: CandidateUpdateInput!) {
-      updateOneCandidate(query: $query, set: $set) {
+    mutation UpdateCandidate($filter: CandidateFilterType!, $update: CandidateUpdateType!) {
+      updateOneCandidate(filter: $filter, update: $update) {
         url
       }
     }
@@ -257,6 +277,8 @@ function CandidateCard({
   dismissed = false,
   existingSubmissions,
 }) {
+  const addToast = useToast();
+
   const { isRole } = useUserContext();
 
   const localizePath = useLocalizePath();
@@ -329,18 +351,23 @@ function CandidateCard({
               {isRole('incident_editor') &&
                 (dismissed ? (
                   <Dropdown.Item
-                    onClick={() => {
+                    onClick={async () => {
                       setDismissedArticles((dismissedArticles) => {
                         const updatedValue = { ...dismissedArticles };
 
                         updatedValue[newsArticle.url] = false;
                         return updatedValue;
                       });
-                      updateCandidate({
+                      await updateCandidate({
                         variables: {
-                          query: { url: newsArticle.url },
-                          set: { dismissed: false },
+                          filter: { url: { EQ: newsArticle.url } },
+                          update: { set: { dismissed: false } },
                         },
+                      });
+
+                      addToast({
+                        message: `Restored article: ${newsArticle.url}`,
+                        severity: SEVERITY.success,
                       });
                     }}
                   >
@@ -354,18 +381,22 @@ function CandidateCard({
                   </Dropdown.Item>
                 ) : (
                   <Dropdown.Item
-                    onClick={() => {
+                    onClick={async () => {
                       setDismissedArticles((dismissedArticles) => {
                         const updatedValue = { ...dismissedArticles };
 
                         updatedValue[newsArticle.url] = true;
                         return updatedValue;
                       });
-                      updateCandidate({
+                      await updateCandidate({
                         variables: {
-                          query: { url: newsArticle.url },
-                          set: { dismissed: true },
+                          filter: { url: { EQ: newsArticle.url } },
+                          update: { set: { dismissed: true } },
                         },
+                      });
+                      addToast({
+                        message: `Dismissed article: ${newsArticle.url}`,
+                        severity: SEVERITY.success,
                       });
                     }}
                   >

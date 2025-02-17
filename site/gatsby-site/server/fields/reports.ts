@@ -2,8 +2,9 @@ import { GraphQLBoolean, GraphQLFieldConfigMap, GraphQLInputObjectType, GraphQLI
 import { allow } from "graphql-shield";
 import { generateMutationFields, generateQueryFields, getQueryResolver } from "../utils";
 import { isRole } from "../rules";
-import { linkReportsToIncidents } from "./common";
+import { linkReportsToIncidents, logReportHistory } from "./common";
 import { ReportType } from "../types/report";
+import { Context, DBReport } from "../interfaces";
 
 
 export const queryFields: GraphQLFieldConfigMap<any, any> = {
@@ -84,7 +85,22 @@ const CreateVariantInput = new GraphQLInputObjectType({
 
 export const mutationFields: GraphQLFieldConfigMap<any, any> = {
 
-    ...generateMutationFields({ collectionName: 'reports', Type: ReportType, generateFields: ['updateOne', 'deleteOne', 'insertOne'] }),
+    ...generateMutationFields({
+        collectionName: 'reports',
+        Type: ReportType,
+        generateFields: ['updateOne', 'deleteOne', 'insertOne'],
+        onResolve: async (operation, context, params) => {
+
+            const { result } = params!;
+
+            if (operation === 'updateOne' || operation === 'insertOne') {
+
+                await logReportHistory(result, context)
+            }
+
+            return result;
+        },
+    }),
 
     flagReport: {
         type: ReportType,
@@ -170,10 +186,10 @@ export const mutationFields: GraphQLFieldConfigMap<any, any> = {
                 type: new GraphQLNonNull(CreateVariantInput),
             },
         },
-        resolve: async (source, { input }, context) => {
+        resolve: async (source, { input }, context: Context) => {
 
             const incidents = context.client.db('aiidprod').collection("incidents");
-            const reports = context.client.db('aiidprod').collection("reports");
+            const reports = context.client.db('aiidprod').collection<DBReport>("reports");
 
             const parentIncident = await incidents.findOne({ incident_id: input.incidentId });
 
@@ -181,7 +197,9 @@ export const mutationFields: GraphQLFieldConfigMap<any, any> = {
                 throw `Incident ${input.incidentId} not found`;
             }
 
-            const report_number = (await reports.find({}).sort({ report_number: -1 }).limit(1).next()).report_number + 1;
+            const lastReport = await reports.find({}).sort({ report_number: -1 }).limit(1).next();
+
+            const report_number = lastReport ? lastReport.report_number + 1 : 1;
 
             const now = new Date();
 
@@ -210,9 +228,10 @@ export const mutationFields: GraphQLFieldConfigMap<any, any> = {
                 language: 'en',
                 tags: ['variant:unreviewed'],
                 inputs_outputs: input.variant.inputs_outputs,
+                user: context.user?.id ?? '',
             };
 
-            await reports.insertOne({ ...newReport, report_number: newReport.report_number });
+            await reports.insertOne({ ...newReport, report_number: newReport.report_number, created_at: new Date() });
 
             const incident_ids = [input.incidentId];
             const report_numbers = [newReport.report_number];

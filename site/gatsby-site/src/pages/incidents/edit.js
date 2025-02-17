@@ -13,8 +13,7 @@ import { Link } from 'gatsby';
 import { processEntities } from '../../utils/entities';
 import DefaultSkeleton from 'elements/Skeletons/Default';
 import { getUnixTime } from 'date-fns';
-import { useUserContext } from 'contexts/userContext';
-import { useLogIncidentHistory } from '../../hooks/useLogIncidentHistory';
+import { useUserContext } from 'contexts/UserContext';
 
 function EditCitePage(props) {
   const { user } = useUserContext();
@@ -40,8 +39,6 @@ function EditCitePage(props) {
   const [createEntityMutation] = useMutation(UPSERT_ENTITY);
 
   const addToast = useToastContext();
-
-  const { logIncidentHistory } = useLogIncidentHistory();
 
   const updateSuccessToast = ({ incidentId }) => ({
     message: (
@@ -82,6 +79,7 @@ function EditCitePage(props) {
           __typename: undefined,
         },
         __typename: undefined,
+        incidentSearch: undefined,
       };
 
       const { entities } = entitiesData;
@@ -104,6 +102,12 @@ function EditCitePage(props) {
         createEntityMutation
       );
 
+      updated.implicated_systems = await processEntities(
+        entities,
+        values.implicated_systems,
+        createEntityMutation
+      );
+
       updated.epoch_date_modified = getUnixTime(new Date());
 
       // Add the current user to the list of editors
@@ -123,16 +127,6 @@ function EditCitePage(props) {
           },
         },
       });
-
-      await logIncidentHistory(
-        {
-          ...incident,
-          ...updated,
-          reports: incident.reports,
-          embedding: incident.embedding,
-        },
-        user
-      );
 
       await updateSimilarIncidentsReciprocal(
         updated.editor_similar_incidents,
@@ -166,6 +160,10 @@ function EditCitePage(props) {
       updateIncidentSet(dissimilarIncidents, 'editor_dissimilar_incidents'),
     ]);
   };
+
+  const entityNames = entitiesData?.entities
+    ? entitiesData.entities.map((node) => node.name).sort()
+    : [];
 
   return (
     <div className={'w-full'} {...props}>
@@ -204,11 +202,23 @@ function EditCitePage(props) {
                 ? []
                 : incident.AllegedHarmedOrNearlyHarmedParties.map((item) => item.name),
             editors: incident.editors.map((user) => user.userId),
+            implicated_systems:
+              incident.implicated_systems === null
+                ? []
+                : incident.implicated_systems.map((item) => item.name),
           }}
         >
-          {({ isValid, isSubmitting, submitForm }) => (
+          {({ isValid, isSubmitting, submitForm, errors }) => (
             <>
-              <IncidentForm />
+              <IncidentForm entityNames={entityNames} />
+              {!isValid && (
+                <div className="text-red-500">
+                  Could not validate form:{' '}
+                  {Object.values(errors).map((error, index) => (
+                    <div key={`error-${index}`}>{error}</div>
+                  ))}
+                </div>
+              )}
               <Button
                 onClick={submitForm}
                 type="submit"

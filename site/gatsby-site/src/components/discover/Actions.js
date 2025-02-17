@@ -15,14 +15,9 @@ import { useMutation, useQuery } from '@apollo/client';
 import { Trans, useTranslation } from 'react-i18next';
 import CustomButton from '../../elements/Button';
 import { Modal } from 'flowbite-react';
-import { useUserContext } from 'contexts/userContext';
-import { useLogReportHistory } from '../../hooks/useLogReportHistory';
-import { getUnixTime } from 'date-fns';
 import useLocalizePath from 'components/i18n/useLocalizePath';
 
 function FlagModalContent({ reportNumber }) {
-  const { user } = useUserContext();
-
   const { data } = useQuery(FIND_REPORT, {
     variables: {
       filter: { report_number: { EQ: reportNumber } },
@@ -31,25 +26,13 @@ function FlagModalContent({ reportNumber }) {
 
   const [flagReportMutation, { loading }] = useMutation(FLAG_REPORT);
 
-  const { logReportHistory } = useLogReportHistory();
-
   const flagReport = async () => {
-    const now = new Date();
-
     await flagReportMutation({
       variables: {
         report_number: reportNumber,
         input: true,
       },
     });
-
-    const updated = {
-      flag: true,
-      date_modified: now,
-      epoch_date_modified: getUnixTime(now),
-    };
-
-    await logReportHistory(data.report, updated, user);
   };
 
   const report = data?.report;
@@ -95,15 +78,7 @@ export default function Actions({ item, toggleFilterByIncidentId = null }) {
 
   return (
     <div className="flex flex-wrap">
-      <WebArchiveLink
-        url={item.url}
-        date={item.date_submitted}
-        className="btn btn-link px-1"
-        title={t('Authors')}
-        datePublished={item.epoch_date_published}
-        incidentDate={item.epoch_incident_date}
-        dateSubmitted={item.epoch_date_submitted}
-      >
+      <WebArchiveLink url={item.url} className="btn btn-link px-1">
         <FontAwesomeIcon
           titleId="report-source"
           icon={faNewspaper}

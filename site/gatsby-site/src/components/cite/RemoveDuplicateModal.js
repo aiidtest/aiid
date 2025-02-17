@@ -17,18 +17,18 @@ export default function RemoveDuplicateModal({ incident, show, onClose }) {
 
   const [insertDuplicate] = useMutation(INSERT_DUPLICATE);
 
-  const [updateClassification] = useMutation(UPSERT_CLASSIFICATION);
+  const [upsertClassification] = useMutation(UPSERT_CLASSIFICATION);
 
-  const [updateSubscription] = useMutation(UPSERT_SUBSCRIPTION);
+  const [upsertSubscription] = useMutation(UPSERT_SUBSCRIPTION);
 
   const { data: classificationsData, loading: classificationsLoading } = useQuery(
     FIND_CLASSIFICATION,
-    { variables: { query: { incidents: { incident_id: incident.incident_id } } } }
+    { variables: { filter: { incidents: { EQ: incident.incident_id } } } }
   );
 
   const { data: subscriptionsData, loading: subscriptionsLoading } = useQuery(
     FIND_FULL_SUBSCRIPTIONS,
-    { variables: { query: { incident_id: { incident_id: incident.incident_id } } } }
+    { variables: { filter: { incident_id: { EQ: incident.incident_id } } } }
   );
 
   return (
@@ -41,7 +41,7 @@ export default function RemoveDuplicateModal({ incident, show, onClose }) {
           {({ values, isSubmitting, setSubmitting }) => {
             const { data: duplicateIncidentData, loading: duplicateIncidentLoading } = useQuery(
               FIND_INCIDENT,
-              { variables: { query: { incident_id: values.duplicateIncidentId?.[0] } } }
+              { variables: { filter: { incident_id: { EQ: values.duplicateIncidentId?.[0] } } } }
             );
 
             const submitBlocked =
@@ -88,8 +88,8 @@ export default function RemoveDuplicateModal({ incident, show, onClose }) {
               try {
                 await updateIncident({
                   variables: {
-                    query: { incident_id: true_incident_number },
-                    set: { reports: { link: reportIds } },
+                    filter: { incident_id: { EQ: true_incident_number } },
+                    update: { set: { reports: { link: reportIds } } },
                   },
                 });
               } catch (e) {
@@ -103,11 +103,12 @@ export default function RemoveDuplicateModal({ incident, show, onClose }) {
 
               try {
                 for (const classification of classificationsData.classifications) {
-                  await updateClassification({
+                  await upsertClassification({
                     variables: {
-                      query: { _id: classification._id },
-                      data: {
+                      filter: { _id: { EQ: classification._id } },
+                      update: {
                         ...classification,
+                        _id: undefined,
                         incidents: {
                           link: classification.incidents
                             .map((incident) => incident.incident_id)
@@ -131,10 +132,10 @@ export default function RemoveDuplicateModal({ incident, show, onClose }) {
               }
               try {
                 for (const subscription of subscriptionsData.subscriptions) {
-                  await updateSubscription({
+                  await upsertSubscription({
                     variables: {
-                      query: { _id: subscription._id },
-                      subscription: {
+                      filter: { _id: { EQ: subscription._id } },
+                      update: {
                         userId: { link: subscription.userId.userId },
                         incident_id: { link: true_incident_number },
                         type: subscription.type,

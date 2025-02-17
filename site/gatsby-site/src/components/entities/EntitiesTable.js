@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Trans, useTranslation } from 'react-i18next';
 import Table, { DefaultColumnFilter, DefaultColumnHeader } from 'components/ui/Table';
 import { Button } from 'flowbite-react';
-import { useUserContext } from 'contexts/userContext';
+import { useUserContext } from 'contexts/UserContext';
 import useLocalizePath from 'components/i18n/useLocalizePath';
 
 function IncidentsCell({ cell }) {
@@ -131,7 +131,7 @@ const incidentFilter = (rows, [field], value) =>
   rows.filter((row) => {
     return row.values[field].some((incident) =>
       ['incident_id', 'title'].some((field) =>
-        incident[field].toString().toLowerCase().includes(value)
+        incident[field].toString().toLowerCase().includes(value.toLowerCase())
       )
     );
   });
@@ -252,8 +252,22 @@ export default function EntitiesTable({ data, className = '', ...props }) {
         sortType: sortByCount,
       },
       {
+        title: t('As Implicated system'),
+        accessor: 'incidentsImplicatedSystems',
+        Cell: IncidentsCell,
+        filter: incidentFilter,
+        sortType: sortByCount,
+      },
+      {
         title: t('Related Entities'),
         accessor: 'relatedEntities',
+        Cell: EntitiesCell,
+        filter: entitiesFilter,
+        sortType: sortByCount,
+      },
+      {
+        title: t('Entity Relationships'),
+        accessor: 'entityRelationships',
         Cell: EntitiesCell,
         filter: entitiesFilter,
         sortType: sortByCount,

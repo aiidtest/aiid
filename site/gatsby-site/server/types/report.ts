@@ -1,17 +1,10 @@
-import { GraphQLBoolean, GraphQLFloat, GraphQLInt, GraphQLList, GraphQLNonNull, GraphQLObjectType, GraphQLString } from "graphql";
-import { DateTimeResolver } from "graphql-scalars";
+import { GraphQLBoolean, GraphQLInt, GraphQLList, GraphQLNonNull, GraphQLObjectType, GraphQLString } from "graphql";
+import { DateTimeResolver, GraphQLDateTime } from "graphql-scalars";
 import { ObjectIdScalar } from "../scalars";
 import { getRelationshipConfig } from "../utils";
 import { Context } from "../interfaces";
 import { UserType } from "./user";
-
-const EmbeddingType = new GraphQLObjectType({
-    name: 'ReportEmbedding',
-    fields: {
-        from_text_hash: { type: GraphQLString },
-        vector: { type: new GraphQLList(GraphQLFloat) }
-    }
-});
+import { EmbeddingType } from "./types";
 
 const ReportTranslationsType = new GraphQLObjectType({
     name: 'ReportTranslations',
@@ -27,6 +20,7 @@ export const ReportType = new GraphQLObjectType({
         _id: { type: ObjectIdScalar },
         authors: { type: new GraphQLNonNull(new GraphQLList(GraphQLString)) },
         cloudinary_id: { type: new GraphQLNonNull(GraphQLString) },
+        created_at: { type: GraphQLDateTime },
         date_downloaded: { type: new GraphQLNonNull(DateTimeResolver) },
         date_modified: { type: new GraphQLNonNull(DateTimeResolver) },
         date_published: { type: new GraphQLNonNull(DateTimeResolver) },

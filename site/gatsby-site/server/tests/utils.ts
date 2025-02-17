@@ -1,6 +1,6 @@
 import { startStandaloneServer } from "@apollo/server/standalone";
 import { schema } from "../schema";
-import { MongoClient, ObjectId, WithId } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import { ApolloServer } from "@apollo/server";
 import config from '../config';
 import supertest from 'supertest';
@@ -40,22 +40,16 @@ export const seedCollection = async ({ name, docs, database = 'aiidprod', drop =
     }
 }
 
-export const seedUsers = async (users: { userId: string, roles: string[] | null }[], { drop } = { drop: true }) => {
+export const makeRequest = async (url: string, data: { query: string, variables?: Record<string, unknown> }, headers?: Record<string, string>) => {
 
-    await seedCollection({
-        name: 'users',
-        database: 'customData',
-        docs: users,
-        drop,
-    });
-}
+    const request = supertest(url).post('/')
 
-export const makeRequest = async (url: string, data: { variables?: Record<string, unknown>, query: string }) => {
+    if (headers) {
 
-    return supertest(url)
-        .post('/')
-        .set('Authorization', `Bearer dummyToken`)
-        .send(data);
+        request.set(headers)
+    }
+
+    return request.send(data);
 }
 
 type DeepPartial<T> = T extends object ? { [P in keyof T]?: DeepPartial<T[P]> } : T;
@@ -80,6 +74,7 @@ export interface Fixture<T, U, I = any> {
         allowed: User[];
         denied: User[];
         sort: unknown;
+        filter?: unknown;
         result: DeepPartial<T>[];
     } | null;
     testPluralPagination: {
@@ -154,4 +149,27 @@ export const seedFixture = async (seeds: Record<string, Record<string, Record<st
             await seedCollection({ database, name, docs, });
         }
     }
+}
+
+export const mockSession = (userId: string) => {
+
+    const client = new MongoClient(process.env.API_MONGODB_CONNECTION_STRING!);
+
+    const db = client.db('customData');
+    const collection = db.collection('users');
+
+    jest.spyOn(context, 'verifyToken').mockImplementation(async () => {
+
+        const user = await collection.findOne<{ userId: string, roles: string[] }>({ userId: userId });
+
+        return user ? { id: user.userId, roles: user.roles } : null;
+    })
+}
+
+export const getCollection = (databaseName: string, collectionName: string) => {
+
+    const client = new MongoClient(process.env.API_MONGODB_CONNECTION_STRING!);
+    const collection = client.db(databaseName).collection(collectionName);
+
+    return collection;
 }
