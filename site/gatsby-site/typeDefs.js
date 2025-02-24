@@ -179,33 +179,24 @@ const typeDefs = `
         complete_from: completeFrom
     }
 
-    type mongodbTranslationsReportsEs implements Node{
+    type mongodbTranslationsReports implements Node {
         title: String
         text: String
         report_number: Int
-    }
-
-    type mongodbTranslationsReportsEn implements Node {
-        title: String
-        text: String
-        report_number: Int
-    }
-
-    type mongodbTranslationsReportsFr implements Node {
-        title: String
-        text: String
-        report_number: Int
-    }
-
-    type mongodbTranslationsReportsJa implements Node {
-        title: String
-        text: String
-        report_number: Int
+        language: String
     }
 
     type mongodbAiidprodDuplicates implements Node {
         duplicate_incident_number: Int
         true_incident_number: Int
+    }
+
+    type mongodbAiidprodEntityRelationships implements Node {
+        is_symmetric: Boolean
+        sub: [String]
+        obj: [String]
+        created_at: Date
+        pred: String
     }
 `;
 

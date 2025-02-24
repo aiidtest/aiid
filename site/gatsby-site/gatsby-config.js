@@ -13,7 +13,8 @@ const adapter = require('gatsby-adapter-netlify').default;
 
 let googleTrackingIds = [];
 
-if (process.env.SITE_URL === config.gatsby.siteUrl) {
+// TODO: Remove this once we have a new env variable ENVIRONMENT to check against
+if (process.env.SITE_URL === 'https://incidentdatabase.ai') {
   googleTrackingIds.push(config.gatsby.gaTrackingId);
 }
 
@@ -87,13 +88,15 @@ const plugins = [
         'classifications',
         'reports',
         'entities',
+        'entity_relationships',
       ],
       connectionString: config.mongodb.connectionString,
-      extraParams: {
-        replicaSet: config.mongodb.replicaSet,
-      },
+      ...(config.mongodb.replicaSet
+        ? { extraParams: { replicaSet: config.mongodb.replicaSet } }
+        : {}),
     },
   },
+  // TODO: Remove the following source once all reports are migrated to the new schema
   {
     resolve: 'gatsby-source-mongodb',
     options: {
@@ -105,6 +108,17 @@ const plugins = [
         ],
         []
       ),
+      connectionString: config.mongodb.connectionString,
+      ...(config.mongodb.replicaSet
+        ? { extraParams: { replicaSet: config.mongodb.replicaSet } }
+        : {}),
+    },
+  },
+  {
+    resolve: 'gatsby-source-mongodb',
+    options: {
+      dbName: 'translations',
+      collection: ['reports'],
       connectionString: config.mongodb.connectionString,
       extraParams: {
         replicaSet: config.mongodb.replicaSet,
@@ -251,6 +265,7 @@ const plugins = [
           'footer',
           'sponsors',
           'incidents',
+          'auth',
         ],
         debug: process.env.GATSBY_I18N_DEBUG,
         nsSeparator: false,
