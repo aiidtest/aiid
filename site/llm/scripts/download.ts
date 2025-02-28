@@ -3,6 +3,7 @@ import * as schema from '../db/schema';
 import { eq, inArray, sql } from 'drizzle-orm';
 import { db, close } from '../db';
 import QUERIES from '../queries';
+import { User, Entity, Report, Incident } from '../../gatsby-site/server/generated/graphql';
 
 const BATCH_SIZE = 100;
 const API_URL = 'https://incidentdatabase.ai/api/graphql';
@@ -89,35 +90,35 @@ const handleManyToManyRelation = async <T extends { entity_id?: string, userId?:
   }
 };
 
-
-const processUser = async (user: any) => {
+const processUser = async (user: User) => {
   await db.insert(schema.users)
     .values({
       userId: user.userId,
       firstName: user.first_name,
       lastName: user.last_name,
       roles: user.roles,
-    })
+    } as typeof schema.users.$inferInsert)
+    .onConflictDoNothing();
 };
 
-const processEntity = async (entity: any) => {
+const processEntity = async (entity: Entity) => {
   await db.insert(schema.entities)
     .values({
       entityId: entity.entity_id,
       name: entity.name,
       createdAt: entity.created_at ? new Date(entity.created_at) : new Date(),
       dateModified: entity.date_modified ? new Date(entity.date_modified) : null,
-    })
+    } as typeof schema.entities.$inferInsert)
+    .onConflictDoNothing();
 };
 
-const processReport = async (report: any) => {
+const processReport = async (report: Report) => {
   await db.insert(schema.reports)
     .values({
       reportNumber: report.report_number,
       title: report.title,
       text: report.text,
       plainText: report.plain_text,
-      description: report.description,
       url: report.url,
       sourceDomain: report.source_domain,
       imageUrl: report.image_url,
@@ -139,23 +140,26 @@ const processReport = async (report: any) => {
       isIncidentReport: report.is_incident_report,
       editorNotes: report.editor_notes,
       quiet: report.quiet,
-    })
+    } as typeof schema.reports.$inferInsert)
+    .onConflictDoNothing();
 };
 
-const processIncident = async (incident: any) => {
+const processIncident = async (incident: Incident) => {
   const [insertedIncident] = await db.insert(schema.incidents)
     .values({
       incidentId: incident.incident_id,
       title: incident.title,
-      description: incident.description,
       date: new Date(incident.date),
+      description: incident.description,
       editorNotes: incident.editor_notes,
       epochDateModified: incident.epoch_date_modified,
       editorSimilarIncidents: incident.editor_similar_incidents || [],
       editorDissimilarIncidents: incident.editor_dissimilar_incidents || [],
       tsneX: incident.tsne?.x,
       tsneY: incident.tsne?.y,
-    }).returning();
+    } as typeof schema.incidents.$inferInsert)
+    .onConflictDoNothing()
+    .returning();
 
   await handleManyToManyRelation({
     sourceId: insertedIncident.incidentId,
