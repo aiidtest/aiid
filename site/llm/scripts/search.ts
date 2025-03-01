@@ -1,7 +1,7 @@
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs';
-import { VoyageEmbeddings } from '../lib/VoyagerEmbeddings';
 import { VectorSearch } from '../lib/VectorSearch';
+import { createEmbeddingProvider } from '../lib/utils';
 
 async function main() {
     const argv = await yargs(hideBin(process.argv))
@@ -21,15 +21,20 @@ async function main() {
             alias: 's',
             type: 'number',
             description: 'Minimum similarity score (0-1)',
-            default: 0.7
+            default: 0.2
+        })
+        .option('provider', {
+            alias: 'p',
+            type: 'string',
+            description: 'Embedding provider to use (openai or voyageai)',
+            default: 'openai'
         }).argv;
 
-    const embeddings = new VoyageEmbeddings(process.env.VOYAGE_API_KEY!);
-    const search = new VectorSearch(embeddings);
+    const provider = createEmbeddingProvider(argv.provider);
+    const search = new VectorSearch(provider, { minScore: argv.minScore });
 
     const results = await search.search(argv.query, {
-        limit: argv.limit,
-        minScore: argv.minScore
+        limit: argv.limit
     });
 
     console.log(JSON.stringify(results, null, 2));

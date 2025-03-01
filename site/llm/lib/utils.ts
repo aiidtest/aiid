@@ -1,6 +1,6 @@
 import { EmbeddingProvider } from '../types';
-import { OpenAIEmbeddings } from '../lib/OpenAIEmbeddings';
-import { VoyageEmbeddings } from '../lib/VoyagerEmbeddings';
+import { OpenAIEmbeddings } from './OpenAIEmbeddings';
+import { VoyageEmbeddings } from './VoyagerEmbeddings';
 
 /**
  * Creates an embedding provider based on the specified provider name

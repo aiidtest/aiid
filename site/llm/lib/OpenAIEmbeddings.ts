@@ -15,7 +15,6 @@ export class OpenAIEmbeddings implements EmbeddingProvider {
             model: this.model,
             input: text,
             encoding_format: "float",
-            dimensions: 1024,
         });
         
         return { embedding: response.data[0].embedding, model: this.model };

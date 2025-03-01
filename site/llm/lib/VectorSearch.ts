@@ -18,7 +18,11 @@ export interface SearchResult {
 }
 
 export class VectorSearch {
-  constructor(private embeddings: EmbeddingProvider) { }
+  private minScore: number;
+
+  constructor(private embeddings: EmbeddingProvider, options: { minScore: number }) {
+    this.minScore = options.minScore;
+  }
 
   async searchReports(embedding: number[], limit = 5): Promise<SearchResult[]> {
     const similarity = sql<number>`1 - (${cosineDistance(reportEmbeddings.embedding, embedding)})`;
@@ -37,7 +41,7 @@ export class VectorSearch {
       })
       .from(reportEmbeddings)
       .innerJoin(reports, eq(reports.reportNumber, reportEmbeddings.reportNumber))
-      .where(gt(similarity, 0.7))
+      .where(gt(similarity, this.minScore))
       .orderBy(desc(similarity))
       .limit(limit);
   }
@@ -57,7 +61,7 @@ export class VectorSearch {
       })
       .from(incidentEmbeddings)
       .innerJoin(incidents, eq(incidents.incidentId, incidentEmbeddings.incidentId))
-      .where(gt(similarity, 0.7))
+      .where(gt(similarity, this.minScore))
       .orderBy(desc(similarity))
       .limit(limit);
   }
@@ -72,7 +76,6 @@ export class VectorSearch {
       limit = 5,
       searchReports = true,
       searchIncidents = true,
-      minScore = 0.7
     } = options;
 
     const { embedding } = await this.embeddings.getEmbedding(query);

@@ -5,7 +5,7 @@ import readline from 'readline';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs';
 import { EmbeddingProvider } from '../types';
-import { createEmbeddingProvider } from '../utils/embeddings';
+import { createEmbeddingProvider } from '../lib/utils';
 
 const CHUNK_SIZE = 1000;
 const CHUNK_OVERLAP = 200;

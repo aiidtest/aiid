@@ -154,7 +154,7 @@ export const reportEmbeddings = pgTable('reportEmbeddings', {
     reportNumber: integer('reportNumber').references(() => reports.reportNumber),
     chunkIndex: integer('chunkIndex').notNull(),
     chunkText: text('chunkText').notNull(),
-    embedding: vector('embedding', { dimensions: 1024 }),
+    embedding: vector('embedding', { dimensions: 1536 }),
     createdAt: timestamp('createdAt').defaultNow().notNull(),
     model: text('model').notNull(),
 }, (table) => ({
@@ -166,7 +166,7 @@ export const incidentEmbeddings = pgTable('incidentEmbeddings', {
     incidentId: integer('incidentId').references(() => incidents.incidentId),
     chunkIndex: integer('chunkIndex').notNull(),
     chunkText: text('chunkText').notNull(),
-    embedding: vector('embedding', { dimensions: 1024 }),
+    embedding: vector('embedding', { dimensions: 1536 }),
     createdAt: timestamp('createdAt').defaultNow().notNull(),
     model: text('model').notNull(),
 }, (table) => ({
