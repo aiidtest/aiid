@@ -1,11 +1,11 @@
 import { db } from '../db';
 import * as schema from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import readline from 'readline';
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs';
 import { EmbeddingProvider } from '../types';
-import { createEmbeddingProvider } from '../lib/utils';
+import { createEmbeddingProvider } from '@/lib/utils';
 
 const CHUNK_SIZE = 1000;
 const CHUNK_OVERLAP = 200;
@@ -37,7 +37,12 @@ async function processReport(reportNumber: number, provider: EmbeddingProvider) 
 
     console.log(`Processing report ${reportNumber}`);
 
-    if (await db.query.reportEmbeddings.findFirst({ where: eq(schema.reportEmbeddings.reportNumber, reportNumber) })) {
+    if (await db.query.embeddings.findFirst({
+        where: and(
+            eq(schema.embeddings.sourceType, 'report'),
+            eq(schema.embeddings.sourceId, reportNumber.toString())
+        )
+    })) {
         console.log(`Report ${reportNumber} already processed`);
         return;
     }
@@ -48,7 +53,7 @@ async function processReport(reportNumber: number, provider: EmbeddingProvider) 
 
     if (!report) return;
 
-    const metadata = [
+    const metadataChunk = [
         `Title: ${report.title}`,
         `URL: ${report.url}`,
         `Language: ${report.language}`,
@@ -58,39 +63,70 @@ async function processReport(reportNumber: number, provider: EmbeddingProvider) 
         `Date Published: ${report.datePublished?.toISOString() || ''}`
     ].join('\n');
 
-    const { embedding: metadataEmbedding, model } = await provider.getEmbedding(metadata);
+    try {
+        // Start a transaction for all-or-nothing insertion
+        await db.transaction(async (tx) => {
+            const { embedding: metadataEmbedding } = await provider.getEmbedding(metadataChunk);
 
-    await db.insert(schema.reportEmbeddings).values({
-        reportNumber: reportNumber,
-        chunkIndex: 0,
-        chunkText: metadata,
-        embedding: metadataEmbedding,
-        model: provider.getModel(),
-    } as typeof schema.reportEmbeddings.$inferInsert);
+            await tx.insert(schema.embeddings).values({
+                sourceType: 'report',
+                sourceId: reportNumber.toString(),
+                chunkIndex: 0,
+                chunkText: metadataChunk,
+                embedding: metadataEmbedding,
+                model: provider.getModel(),
+                metadata: {
+                    reportNumber: reportNumber,
+                    title: report.title,
+                    url: report.url
+                }
+            } as typeof schema.embeddings.$inferInsert);
 
-    const chunks = report.plainText ? chunkText(report.plainText) : [];
+            const chunks = report.plainText ? chunkText(report.plainText) : [];
 
-    for (let i = 0; i < chunks.length; i++) {
+            // Process all chunks and collect their embeddings
+            const chunkEmbeddings = await Promise.all(
+                chunks.map(async (chunk, i) => {
+                    const { embedding } = await provider.getEmbedding(chunk);
+                    return {
+                        sourceType: 'report',
+                        sourceId: reportNumber.toString(),
+                        chunkIndex: i + 1,
+                        chunkText: chunk,
+                        embedding: embedding,
+                        model: provider.getModel(),
+                        metadata: {
+                            reportNumber: reportNumber,
+                            title: report.title,
+                            url: report.url
+                        }
+                    } as typeof schema.embeddings.$inferInsert;
+                })
+            );
 
-        const { embedding } = await provider.getEmbedding(chunks[i]);
+            // Insert all chunks in a single operation if there are any
+            if (chunkEmbeddings.length > 0) {
+                await tx.insert(schema.embeddings).values(chunkEmbeddings);
+            }
 
-        await db.insert(schema.reportEmbeddings).values({
-            reportNumber: reportNumber,
-            chunkIndex: i + 1,
-            chunkText: chunks[i],
-            embedding: embedding,
-            model: provider.getModel(),
-        } as typeof schema.reportEmbeddings.$inferInsert);
+            console.log(`Processed report ${reportNumber}, ${chunks.length} chunks`);
+        });
+    } catch (error) {
+        console.error(`Error processing report ${reportNumber}:`, error);
+        throw error; // Re-throw to allow caller to handle
     }
-
-    console.log(`Processed report ${reportNumber}, ${chunks.length} chunks`);
 }
 
 async function processIncident(incidentId: number, provider: EmbeddingProvider) {
 
     console.log(`Processing incident ${incidentId}`);
 
-    if (await db.query.incidentEmbeddings.findFirst({ where: eq(schema.incidentEmbeddings.incidentId, incidentId) })) {
+    if (await db.query.embeddings.findFirst({
+        where: and(
+            eq(schema.embeddings.sourceType, 'incident'),
+            eq(schema.embeddings.sourceId, incidentId.toString())
+        )
+    })) {
         console.log(`Incident ${incidentId} already processed`);
         return;
     }
@@ -101,38 +137,65 @@ async function processIncident(incidentId: number, provider: EmbeddingProvider) 
 
     if (!incident) return;
 
-    const metadata = [
+    const metadataChunk = [
         `Title: ${incident.title}`,
         `Editor Notes: ${incident.editorNotes || ''}`,
         `Date: ${incident.date?.toISOString() || ''}`
     ].join('\n');
 
-    const { embedding: metadataEmbedding } = await provider.getEmbedding(metadata);
+    try {
+        // Start a transaction for all-or-nothing insertion
+        await db.transaction(async (tx) => {
+            const { embedding: metadataEmbedding } = await provider.getEmbedding(metadataChunk);
 
-    await db.insert(schema.incidentEmbeddings).values({
-        incidentId: incidentId,
-        chunkIndex: 0,
-        chunkText: metadata,
-        embedding: metadataEmbedding,
-        model: provider.getModel(),
-    } as typeof schema.incidentEmbeddings.$inferInsert);
+            // Insert metadata chunk
+            await tx.insert(schema.embeddings).values({
+                sourceType: 'incident',
+                sourceId: incidentId.toString(),
+                chunkIndex: 0,
+                chunkText: metadataChunk,
+                embedding: metadataEmbedding,
+                model: provider.getModel(),
+                metadata: {
+                    incidentId: incidentId,
+                    title: incident.title,
+                    date: incident.date?.toISOString()
+                }
+            } as typeof schema.embeddings.$inferInsert);
 
-    const chunks = incident.description ? chunkText(incident.description) : [];
+            const chunks = incident.description ? chunkText(incident.description) : [];
 
-    for (let i = 0; i < chunks.length; i++) {
+            // Process all chunks and collect their embeddings
+            const chunkEmbeddings = await Promise.all(
+                chunks.map(async (chunk, i) => {
+                    const { embedding } = await provider.getEmbedding(chunk);
+                    return {
+                        sourceType: 'incident',
+                        sourceId: incidentId.toString(),
+                        chunkIndex: i + 1,
+                        chunkText: chunk,
+                        embedding: embedding,
+                        model: provider.getModel(),
+                        metadata: {
+                            incidentId: incidentId,
+                            title: incident.title,
+                            date: incident.date?.toISOString()
+                        }
+                    } as typeof schema.embeddings.$inferInsert;
+                })
+            );
 
-        const { embedding } = await provider.getEmbedding(chunks[i]);
+            // Insert all chunks in a single operation if there are any
+            if (chunkEmbeddings.length > 0) {
+                await tx.insert(schema.embeddings).values(chunkEmbeddings);
+            }
 
-        await db.insert(schema.incidentEmbeddings).values({
-            incidentId: incidentId,
-            chunkIndex: i + 1,
-            chunkText: chunks[i],
-            embedding: embedding,
-            model: provider.getModel(),
-        } as typeof schema.incidentEmbeddings.$inferInsert);
+            console.log(`Processed incident ${incidentId}, ${chunks.length} chunks`);
+        });
+    } catch (error) {
+        console.error(`Error processing incident ${incidentId}:`, error);
+        throw error; // Re-throw to allow caller to handle
     }
-
-    console.log(`Processed incident ${incidentId}, ${chunks.length} chunks`);
 }
 
 async function confirm(message: string): Promise<boolean> {

@@ -1,6 +1,12 @@
 import { EmbeddingProvider } from '../types';
 import { OpenAIEmbeddings } from './OpenAIEmbeddings';
 import { VoyageEmbeddings } from './VoyagerEmbeddings';
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+} 
 
 /**
  * Creates an embedding provider based on the specified provider name
@@ -16,6 +22,7 @@ export function createEmbeddingProvider(providerName: string): EmbeddingProvider
             return new OpenAIEmbeddings(process.env.OPENAI_API_KEY);
         case 'voyageai':
         case 'voyage':
+            
             if (!process.env.VOYAGE_API_KEY) {
                 throw new Error('VOYAGE_API_KEY environment variable is required for VoyageAI provider');
             }

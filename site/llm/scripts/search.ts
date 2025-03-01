@@ -1,7 +1,7 @@
 import { hideBin } from 'yargs/helpers';
 import yargs from 'yargs';
-import { VectorSearch } from '../lib/VectorSearch';
-import { createEmbeddingProvider } from '../lib/utils';
+import { Search } from '../lib/Search';
+import { createEmbeddingProvider } from '@/lib/utils';
 
 async function main() {
     const argv = await yargs(hideBin(process.argv))
@@ -30,12 +30,9 @@ async function main() {
             default: 'openai'
         }).argv;
 
-    const provider = createEmbeddingProvider(argv.provider);
-    const search = new VectorSearch(provider, { minScore: argv.minScore });
+    const search = new Search(createEmbeddingProvider(argv.provider));
 
-    const results = await search.search(argv.query, {
-        limit: argv.limit
-    });
+    const results = await search.vectorSearch(argv.query, argv.minScore, argv.limit);
 
     console.log(JSON.stringify(results, null, 2));
 }

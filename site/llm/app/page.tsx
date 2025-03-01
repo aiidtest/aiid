@@ -1,38 +1,66 @@
-'use client';
+"use client"
 
-import { useChat } from 'ai/react';
+import { useState, useRef, useEffect } from "react"
+import { useChat } from "@ai-sdk/react"
+import { Send, Search, Plus, Mic } from "lucide-react"
+import { Button } from "../components/ui/button"
+import { Input } from "../components/ui/input"
+import { MarkdownRenderer } from "../components/ui/markdown-renderer"
 
-export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit } = useChat({ maxSteps: 5 });
+export default function ChatInterface() {
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat()
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
+    }
+  }, [messages])
+
   return (
-    <div className="flex flex-col w-full max-w-md py-24 mx-auto stretch">
-      <div className="space-y-4">
-        {messages.map(m => (
-          <div key={m.id} className="whitespace-pre-wrap">
-            <div>
-              <div className="font-bold">{m.role}</div>
-              <p>
-                {m.content.length > 0 ? (
-                  m.content
-                ) : (
+    <div className="flex flex-col h-screen bg-[#0D1117] text-white">
+      <main className="flex-1 overflow-auto p-4 space-y-4">
+        {messages.map((message) => (
+          <div key={message.id} className="space-y-2">
+            {message.role === "user" ? (
+              <div className="flex justify-end">
+                <div className="bg-[#2A2F35] rounded-lg p-3 max-w-[80%]">
+                  <MarkdownRenderer content={message.content} />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="bg-[#1C1F24] rounded-lg p-4 max-w-[80%]">
+                  <MarkdownRenderer content={message.content} />
+                </div>
+                {message.content.length <= 0 && (
                   <span className="italic font-light">
-                    {'calling tool: ' + m?.toolInvocations?.[0].toolName}
+                    {'calling tool: ' + message?.toolInvocations?.[0].toolName}
                   </span>
                 )}
-              </p>
-            </div>
+              </div>
+            )}
           </div>
         ))}
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        <input
-          className="fixed bottom-0 w-full max-w-md p-2 mb-8 border border-gray-300 rounded shadow-xl"
-          value={input}
-          placeholder="Say something..."
-          onChange={handleInputChange}
-        />
-      </form>
+        <div ref={messagesEndRef} />
+      </main>
+      <footer className="p-4">
+        <form onSubmit={handleSubmit} className="flex items-center space-x-2">
+          <Button type="button" size="icon" variant="ghost">
+            <Plus className="h-4 w-4" />
+          </Button>
+          <Input
+            value={input}
+            onChange={handleInputChange}
+            placeholder="Ask anything"
+            className="flex-1 bg-[#1C1F24] border-none text-white placeholder-gray-400"
+          />
+          <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
+      </footer>
     </div>
-  );
+  )
 }
+
