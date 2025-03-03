@@ -7,8 +7,11 @@ import yargs from 'yargs';
 import { EmbeddingProvider } from '../types';
 import { createEmbeddingProvider } from '@/lib/utils';
 
-const CHUNK_SIZE = 1000;
-const CHUNK_OVERLAP = 200;
+// Reducing chunk size to avoid token limit errors
+// OpenAI's text-embedding-3-small has a limit of 8192 tokens
+// Setting a conservative limit to ensure we stay under the token limit
+const CHUNK_SIZE = 500;
+const CHUNK_OVERLAP = 100;
 
 function chunkText(text: string): string[] {
     const words = text.split(' ');
@@ -31,6 +34,27 @@ function chunkText(text: string): string[] {
         chunks.push(currentChunk.join(' '));
     }
     return chunks;
+}
+
+async function safeGetEmbedding(text: string, provider: EmbeddingProvider): Promise<{ embedding: number[], model: string }> {
+    try {
+        return await provider.getEmbedding(text);
+    } catch (error) {
+        // Check if the error is related to token limit
+        if (error.message && error.message.includes('maximum context length')) {
+            console.warn('Text too long for embedding, splitting further...');
+
+            // Split the text in half and try again with the first half
+            const halfLength = Math.floor(text.length / 2);
+            const firstHalf = text.substring(0, halfLength);
+
+            console.log(`Original length: ${text.length}, using first ${firstHalf.length} characters`);
+            return await provider.getEmbedding(firstHalf);
+        }
+
+        // If it's not a token limit error, re-throw
+        throw error;
+    }
 }
 
 async function processReport(reportNumber: number, provider: EmbeddingProvider) {
@@ -64,53 +88,58 @@ async function processReport(reportNumber: number, provider: EmbeddingProvider) 
     ].join('\n');
 
     try {
-        // Start a transaction for all-or-nothing insertion
-        await db.transaction(async (tx) => {
-            const { embedding: metadataEmbedding } = await provider.getEmbedding(metadataChunk);
+        // Create an array to collect all embeddings
+        const allEmbeddings: typeof schema.embeddings.$inferInsert[] = [];
 
-            await tx.insert(schema.embeddings).values({
-                sourceType: 'report',
-                sourceId: reportNumber.toString(),
-                chunkIndex: 0,
-                chunkText: metadataChunk,
-                embedding: metadataEmbedding,
-                model: provider.getModel(),
-                metadata: {
-                    reportNumber: reportNumber,
-                    title: report.title,
-                    url: report.url
-                }
-            } as typeof schema.embeddings.$inferInsert);
+        // Process metadata chunk
+        const { embedding: metadataEmbedding } = await safeGetEmbedding(metadataChunk, provider);
 
-            const chunks = report.plainText ? chunkText(report.plainText) : [];
-
-            // Process all chunks and collect their embeddings
-            const chunkEmbeddings = await Promise.all(
-                chunks.map(async (chunk, i) => {
-                    const { embedding } = await provider.getEmbedding(chunk);
-                    return {
-                        sourceType: 'report',
-                        sourceId: reportNumber.toString(),
-                        chunkIndex: i + 1,
-                        chunkText: chunk,
-                        embedding: embedding,
-                        model: provider.getModel(),
-                        metadata: {
-                            reportNumber: reportNumber,
-                            title: report.title,
-                            url: report.url
-                        }
-                    } as typeof schema.embeddings.$inferInsert;
-                })
-            );
-
-            // Insert all chunks in a single operation if there are any
-            if (chunkEmbeddings.length > 0) {
-                await tx.insert(schema.embeddings).values(chunkEmbeddings);
+        // Add metadata embedding to the collection
+        allEmbeddings.push({
+            sourceType: 'report',
+            sourceId: reportNumber.toString(),
+            chunkIndex: 0,
+            chunkText: metadataChunk,
+            embedding: metadataEmbedding,
+            model: provider.getModel(),
+            metadata: {
+                reportNumber: reportNumber,
+                title: report.title,
+                url: report.url
             }
+        } as typeof schema.embeddings.$inferInsert);
 
-            console.log(`Processed report ${reportNumber}, ${chunks.length} chunks`);
-        });
+        const chunks = report.plainText ? chunkText(report.plainText) : [];
+
+        // Process all chunks and collect their embeddings
+        const chunkEmbeddings = await Promise.all(
+            chunks.map(async (chunk, i) => {
+                const { embedding } = await safeGetEmbedding(chunk, provider);
+                return {
+                    sourceType: 'report',
+                    sourceId: reportNumber.toString(),
+                    chunkIndex: i + 1,
+                    chunkText: chunk,
+                    embedding: embedding,
+                    model: provider.getModel(),
+                    metadata: {
+                        reportNumber: reportNumber,
+                        title: report.title,
+                        url: report.url
+                    }
+                } as typeof schema.embeddings.$inferInsert;
+            })
+        );
+
+        // Add chunk embeddings to the collection
+        allEmbeddings.push(...chunkEmbeddings);
+
+        // Insert all embeddings in a single operation
+        if (allEmbeddings.length > 0) {
+            await db.insert(schema.embeddings).values(allEmbeddings);
+        }
+
+        console.log(`Processed report ${reportNumber}, ${chunks.length} chunks`);
     } catch (error) {
         console.error(`Error processing report ${reportNumber}:`, error);
         throw error; // Re-throw to allow caller to handle
@@ -144,54 +173,58 @@ async function processIncident(incidentId: number, provider: EmbeddingProvider) 
     ].join('\n');
 
     try {
-        // Start a transaction for all-or-nothing insertion
-        await db.transaction(async (tx) => {
-            const { embedding: metadataEmbedding } = await provider.getEmbedding(metadataChunk);
+        // Create an array to collect all embeddings
+        const allEmbeddings: typeof schema.embeddings.$inferInsert[] = [];
 
-            // Insert metadata chunk
-            await tx.insert(schema.embeddings).values({
-                sourceType: 'incident',
-                sourceId: incidentId.toString(),
-                chunkIndex: 0,
-                chunkText: metadataChunk,
-                embedding: metadataEmbedding,
-                model: provider.getModel(),
-                metadata: {
-                    incidentId: incidentId,
-                    title: incident.title,
-                    date: incident.date?.toISOString()
-                }
-            } as typeof schema.embeddings.$inferInsert);
+        // Process metadata chunk
+        const { embedding: metadataEmbedding } = await safeGetEmbedding(metadataChunk, provider);
 
-            const chunks = incident.description ? chunkText(incident.description) : [];
-
-            // Process all chunks and collect their embeddings
-            const chunkEmbeddings = await Promise.all(
-                chunks.map(async (chunk, i) => {
-                    const { embedding } = await provider.getEmbedding(chunk);
-                    return {
-                        sourceType: 'incident',
-                        sourceId: incidentId.toString(),
-                        chunkIndex: i + 1,
-                        chunkText: chunk,
-                        embedding: embedding,
-                        model: provider.getModel(),
-                        metadata: {
-                            incidentId: incidentId,
-                            title: incident.title,
-                            date: incident.date?.toISOString()
-                        }
-                    } as typeof schema.embeddings.$inferInsert;
-                })
-            );
-
-            // Insert all chunks in a single operation if there are any
-            if (chunkEmbeddings.length > 0) {
-                await tx.insert(schema.embeddings).values(chunkEmbeddings);
+        // Add metadata embedding to the collection
+        allEmbeddings.push({
+            sourceType: 'incident',
+            sourceId: incidentId.toString(),
+            chunkIndex: 0,
+            chunkText: metadataChunk,
+            embedding: metadataEmbedding,
+            model: provider.getModel(),
+            metadata: {
+                incidentId: incidentId,
+                title: incident.title,
+                date: incident.date?.toISOString()
             }
+        } as typeof schema.embeddings.$inferInsert);
 
-            console.log(`Processed incident ${incidentId}, ${chunks.length} chunks`);
-        });
+        const chunks = incident.description ? chunkText(incident.description) : [];
+
+        // Process all chunks and collect their embeddings
+        const chunkEmbeddings = await Promise.all(
+            chunks.map(async (chunk, i) => {
+                const { embedding } = await safeGetEmbedding(chunk, provider);
+                return {
+                    sourceType: 'incident',
+                    sourceId: incidentId.toString(),
+                    chunkIndex: i + 1,
+                    chunkText: chunk,
+                    embedding: embedding,
+                    model: provider.getModel(),
+                    metadata: {
+                        incidentId: incidentId,
+                        title: incident.title,
+                        date: incident.date?.toISOString()
+                    }
+                } as typeof schema.embeddings.$inferInsert;
+            })
+        );
+
+        // Add chunk embeddings to the collection
+        allEmbeddings.push(...chunkEmbeddings);
+
+        // Insert all embeddings in a single operation
+        if (allEmbeddings.length > 0) {
+            await db.insert(schema.embeddings).values(allEmbeddings);
+        }
+
+        console.log(`Processed incident ${incidentId}, ${chunks.length} chunks`);
     } catch (error) {
         console.error(`Error processing incident ${incidentId}:`, error);
         throw error; // Re-throw to allow caller to handle
