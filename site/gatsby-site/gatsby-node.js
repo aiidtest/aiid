@@ -34,6 +34,8 @@ const createDocPages = require('./page-creators/createDocPages');
 
 const createMissingTranslationsPage = require('./page-creators/createMissingTranslationsPage');
 
+const createEmbedPages = require('./page-creators/createEmbedPages');
+
 const algoliasearch = require('algoliasearch');
 
 const { MongoClient } = require('mongodb');
@@ -86,6 +88,7 @@ exports.createPages = async ({ actions, graphql, reporter }) => {
     createEntitiesPages,
     createReportPages,
     createDocPages,
+    createEmbedPages,
   ]) {
     if (!(process.env.SKIP_PAGE_CREATOR || '').split(',').includes(pageCreator.name)) {
       reporter.info(`Page creation: ${pageCreator.name}`);

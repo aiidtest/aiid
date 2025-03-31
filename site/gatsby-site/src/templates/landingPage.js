@@ -156,7 +156,7 @@ export function Head({ location }) {
     ns: 'landing',
   });
 
-  const metaImage = 'https://incidentdatabase.ai/logos/AIID_1000x1000px.png';
+  const metaImage = `${config.gatsby.siteUrl}/logos/AIID_1000x1000px.png`;
 
   const ldJSON = {
     '@context': 'https://schema.org',
